@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# OS
+.DS_Store
+desktop.ini
+Thumbs.db
+
+# Archives & documents (working files)
+*.zip
+*.pdf
+*.docx
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Misc working files
+fix_all*.py
+REBUILD.md
+EXACT_DESIGN.md
+book1_part1_data.py
+Chat.jsx
+routers/
+src/
+files10_extracted/
+arabic_platform_updates.zip
