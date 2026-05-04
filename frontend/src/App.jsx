@@ -34,7 +34,6 @@ export default function App() {
           <Route path="/" element={<Navigate to="/lessons" replace />} />
           <Route path="/lessons"           element={<AppLayout><Lessons /></AppLayout>} />
           <Route path="/lessons/:lessonId" element={<AppLayout><LessonDetail /></AppLayout>} />
-          <Route path="/chat"              element={<AppLayout><ArabicChat /></AppLayout>} />
           <Route path="/exercises"         element={<AppLayout><Exercises /></AppLayout>} />
           <Route path="/srs"               element={<AppLayout><SRSFlashcards /></AppLayout>} />
           <Route path="/dashboard"         element={<AppLayout><Dashboard /></AppLayout>} />
