@@ -44,7 +44,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # في الإنتاج: ضع عنوان الواجهة الأمامية فقط
+    allow_origins=["https://arabic-platform-flame.vercel.app","http://localhost:5173","http://localhost:8003"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
