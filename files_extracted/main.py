@@ -54,6 +54,13 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await init_db()
+    async for db in get_db():
+        result = await db.execute(select(Unit))
+        unit = result.scalars().first()
+        if not unit:
+            from seed_database import seed
+            await seed()
+        break
     from sqlalchemy import text
     async with AsyncSessionLocal() as db:
         result = await db.execute(text("SELECT COUNT(*) FROM units"))
