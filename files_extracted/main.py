@@ -575,6 +575,17 @@ async def get_unit_stats(
 # ─────────────────────────────────────────
 #  تشغيل التطبيق
 # ─────────────────────────────────────────
+
+@app.get("/api/admin/seed")
+async def run_seed(db: AsyncSession = Depends(get_db)):
+    import importlib.util, sys
+    spec = importlib.util.spec_from_file_location("seed", "seed_database.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    import asyncio
+    await mod.seed()
+    return {"message": "Done!"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
