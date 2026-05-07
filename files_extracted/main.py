@@ -130,10 +130,16 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
 # ═══════════════════════════════════════════
 #  الوحدات (Units)
 # ═══════════════════════════════════════════
-@app.get("/api/units", response_model=List[UnitOut])
+@app.get("/api/units")
 async def get_units(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Unit).order_by(Unit.unit_number))
-    return result.scalars().all()
+    units = result.scalars().all()
+    if not units:
+        from seed_database import seed
+        await seed()
+        result = await db.execute(select(Unit).order_by(Unit.unit_number))
+        units = result.scalars().all()
+    return units
 
 
 @app.get("/api/units/{unit_id}", response_model=UnitOut)
