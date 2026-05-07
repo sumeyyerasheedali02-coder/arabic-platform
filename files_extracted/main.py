@@ -18,7 +18,7 @@ from google import genai
 _genai_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
 from database import (
-    get_db, init_db,
+    get_db, init_db, AsyncSessionLocal,
     Unit, Lesson, Vocabulary, Dialogue, DialogueLine,
     Exercise, ExerciseAnswer, Student, StudentProgress, SRSCard, AISession
 )
@@ -55,18 +55,19 @@ app.add_middleware(
 async def startup():
     await init_db()
     try:
-        from seed_database import seed
-        await seed()
-        print("Seed completed successfully")
-    except Exception as e:
-        print(f"Seed error: {e}")
-    async for db in get_db():
-        result = await db.execute(select(Unit))
-        unit = result.scalars().first()
-        if not unit:
+        from sqlalchemy import text
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(text("SELECT COUNT(*) FROM units"))
+            count = result.scalar()
+        if count == 0:
+            print("Database empty, running seed...")
             from seed_database import seed
             await seed()
-        break
+            print("Seed done!")
+        else:
+            print(f"DB OK: {count} units")
+    except Exception as e:
+        print(f"Seed error: {e}")
     from sqlalchemy import text
     async with AsyncSessionLocal() as db:
         result = await db.execute(text("SELECT COUNT(*) FROM units"))
