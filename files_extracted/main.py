@@ -54,20 +54,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await init_db()
-    try:
-        from sqlalchemy import text
-        async with AsyncSessionLocal() as db:
-            result = await db.execute(text("SELECT COUNT(*) FROM units"))
-            count = result.scalar()
-        if count == 0:
-            print("Database empty, running seed...")
-            from seed_database import seed
-            await seed()
-            print("Seed done!")
-        else:
-            print(f"DB OK: {count} units")
-    except Exception as e:
-        print(f"Seed error: {e}")
+    from seed_database import seed
+    await seed()
     from sqlalchemy import text
     async with AsyncSessionLocal() as db:
         result = await db.execute(text("SELECT COUNT(*) FROM units"))
