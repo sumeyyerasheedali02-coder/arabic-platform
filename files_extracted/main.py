@@ -54,6 +54,13 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await init_db()
+    from sqlalchemy import text
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(text("SELECT COUNT(*) FROM units"))
+        count = result.scalar()
+        if count == 0:
+            import subprocess, sys
+            subprocess.run([sys.executable, "seed_database.py"], cwd="/app/files_extracted")
 
 
 # ─────────────────────────────────────────
