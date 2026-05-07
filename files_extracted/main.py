@@ -609,6 +609,17 @@ async def run_seed(db: AsyncSession = Depends(get_db)):
     await mod.seed()
     return {"message": "Done!"}
 
+
+@app.get("/api/run-seed")
+async def run_seed_now():
+    import traceback
+    try:
+        from seed_database import seed
+        await seed()
+        return {"status": "success"}
+    except Exception as e:
+        return {"status": "error", "detail": str(e), "trace": traceback.format_exc()}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
