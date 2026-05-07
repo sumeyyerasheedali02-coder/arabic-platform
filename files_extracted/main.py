@@ -54,6 +54,12 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await init_db()
+    try:
+        from seed_database import seed
+        await seed()
+        print("Seed completed successfully")
+    except Exception as e:
+        print(f"Seed error: {e}")
     async for db in get_db():
         result = await db.execute(select(Unit))
         unit = result.scalars().first()
