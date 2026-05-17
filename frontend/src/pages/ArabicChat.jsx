@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-const API = "http://localhost:8003";
+const API = import.meta.env.VITE_API_URL || "https://adaptable-solace-production-e226.up.railway.app";
 
 export default function ArabicChat() {
   const [messages, setMessages] = useState([
@@ -9,7 +9,7 @@ export default function ArabicChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token") || "";
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -20,10 +20,10 @@ export default function ArabicChat() {
     setMessages(prev => [...prev, { role: "user", content: text }]);
     setLoading(true);
     try {
-      const res = await fetch(`${API}/gemini/chat`, {
+      const res = await fetch(`${API}/api/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ message: text, history: messages.map(m => ({ role: m.role, content: m.content })) }),
+        headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
+        body: JSON.stringify({ messages: [...messages, {role:"user",content:text}].map(m => ({ role: m.role, content: m.content })) }),
       });
       const data = await res.json();
       setMessages(prev => [...prev, { role: "model", content: res.ok ? data.reply : "⚠️ تأكد من إعداد Gemini API key" }]);

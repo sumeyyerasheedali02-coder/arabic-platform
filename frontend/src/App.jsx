@@ -38,6 +38,7 @@ export default function App() {
           <Route path="/srs"               element={<AppLayout><SRSFlashcards /></AppLayout>} />
           <Route path="/dashboard"         element={<AppLayout><Dashboard /></AppLayout>} />
           <Route path="/teacher"           element={<AppLayout><Teacher /></AppLayout>} />
+          <Route path="/chat"              element={<AppLayout><ArabicChat /></AppLayout>} />
           <Route path="*"                  element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

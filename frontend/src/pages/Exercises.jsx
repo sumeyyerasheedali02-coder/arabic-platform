@@ -167,11 +167,38 @@ function ExerciseCard({ exercise, onAnswer, isGuest }) {
   )
 }
 
+
+const FILTER_OPTIONS = [
+  { value: 'all',             label: 'الكل' },
+  { value: 'multiple_choice', label: 'اختيار متعدد' },
+  { value: 'fill_blank',      label: 'إكمال فراغ' },
+  { value: 'true_false',      label: 'صح وخطأ' },
+  { value: 'translate_ar_tr', label: 'ترجمة' },
+  { value: 'match',           label: 'وصل' },
+  { value: 'synonym',         label: 'مترادفات' },
+  { value: 'antonym',         label: 'متعاكسات' },
+  { value: 'plural',          label: 'الجمع' },
+  { value: 'comprehension',   label: 'استيعاب قرائي' },
+  { value: 'word_order',      label: 'ترتيب كلمات' },
+]
+
+function matchesFilter(exercise, filter) {
+  if (filter === 'all') return true
+  if (filter === 'synonym')      return exercise.hint_ar === 'مترادف'
+  if (filter === 'antonym')      return exercise.hint_ar === 'ضد / متعاكس'
+  if (filter === 'plural')       return exercise.hint_ar === 'جمع الكلمة'
+  if (filter === 'comprehension') return exercise.hint_ar === 'استيعاب قرائي'
+  if (filter === 'word_order')   return exercise.question_ar && exercise.question_ar.includes('رَتِّب')
+  return exercise.exercise_type === filter
+}
+
 export default function Exercises() {
   const { token }                     = useAuth()
   const [units, setUnits]             = useState([])
   const [selectedUnit, setSelectedUnit] = useState(null)
-  const [exercises, setExercises]     = useState([])
+  const [allExercises, setAllExercises] = useState([])
+  const [exercises, setExercises]       = useState([])
+  const [filter, setFilter]             = useState('all')
   const [current, setCurrent]         = useState(0)
   const [session, setSession]         = useState([])
   const [done, setDone]               = useState(false)
@@ -194,9 +221,17 @@ export default function Exercises() {
     setSession([])
     setDone(false)
     api.get(`/units/${selectedUnit.id}/exercises`)
-      .then(r => setExercises(r.data))
+      .then(r => { setAllExercises(r.data); setExercises(r.data) })
       .finally(() => setLoadingEx(false))
   }, [selectedUnit])
+
+  useEffect(() => {
+    const filtered = allExercises.filter(ex => matchesFilter(ex, filter))
+    setExercises(filtered)
+    setCurrent(0)
+    setSession([])
+    setDone(false)
+  }, [filter, allExercises])
 
   const handleAnswer = (result) => setSession(s => [...s, result])
 
@@ -283,6 +318,20 @@ export default function Exercises() {
         >
           {units.map(u => <option key={u.id} value={u.id}>{u.title_ar}</option>)}
         </select>
+      </div>
+
+
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+        {FILTER_OPTIONS.map(opt => (
+          <button key={opt.value} onClick={() => setFilter(opt.value)} style={{
+            padding: '4px 10px', borderRadius: 20, border: 'none', cursor: 'pointer',
+            fontSize: 11, fontWeight: 600, fontFamily: 'DM Sans, sans-serif',
+            background: filter === opt.value ? 'var(--navy)' : 'var(--cream)',
+            color: filter === opt.value ? '#fff' : 'var(--navy)',
+          }}>
+            {opt.label} ({allExercises.filter(ex => matchesFilter(ex, opt.value)).length})
+          </button>
+        ))}
       </div>
 
       {loadingEx ? (

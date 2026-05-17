@@ -1,0 +1,5 @@
+﻿m = open("main.py", encoding="utf-8").read()
+m = m.replace("AIzaSyC0o8_xQpD5MBHOxb-jio4w-lnvPnFwnFI", "AIzaSyCzfVZAgO6GKFMgvPphTUZJvhuv0HyLF9U")
+m = m.replace("gemini-1.5-flash", "gemini-2.0-flash")
+open("main.py", "w", encoding="utf-8").write(m)
+print("Done!")

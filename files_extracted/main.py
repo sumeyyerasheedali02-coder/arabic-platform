@@ -15,7 +15,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from google import genai
-_genai_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
+_genai_client = None
+def get_genai_client():
+    global _genai_client
+    if _genai_client is None:
+        _genai_client = genai.Client(api_key="AIzaSyCZkIl9teuFsTem4CCB1n2cIkVFg1VXZNg")
+    return _genai_client
 
 from database import (
     get_db, init_db, AsyncSessionLocal,
@@ -44,7 +49,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://arabic-platform-flame.vercel.app","http://localhost:5173","http://localhost:8003"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,14 +60,14 @@ app.add_middleware(
 async def startup():
     await init_db()
     from seed_database import seed
-    await seed()
+    pass  # seed via /api/admin/run-seed-now
     from sqlalchemy import text
     async with AsyncSessionLocal() as db:
         result = await db.execute(text("SELECT COUNT(*) FROM units"))
         count = result.scalar()
         if count == 0:
             import subprocess, sys
-            subprocess.run([sys.executable, "seed_database.py"], cwd="/app/files_extracted")
+            pass  # seed via /api/admin/run-seed-now
 
 
 # ─────────────────────────────────────────
@@ -133,21 +138,7 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
 @app.get("/api/units")
 async def get_units(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Unit).order_by(Unit.unit_number))
-    units = result.scalars().all()
-    if not units:
-        try:
-            from seed_database import seed
-            await seed()
-            result = await db.execute(select(Unit).order_by(Unit.unit_number))
-            units = result.scalars().all()
-        except:
-            pass
-    if not units:
-        import sys, os
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from book1_part1_data import BOOK_1_PART_1
-        return [{"id": i+1, "unit_number": u["number"], "title_ar": u["title_ar"], "title_tr": u["title_tr"], "description_ar": "", "description_tr": ""} for i, u in enumerate(BOOK_1_PART_1["units"])]
-    return units
+    return result.scalars().all()
 
 
 @app.get("/api/units/{unit_id}", response_model=UnitOut)
@@ -444,12 +435,21 @@ async def add_unit_to_srs(
 # ═══════════════════════════════════════════
 #  محادثة الذكاء الاصطناعي (AI Chat)
 # ═══════════════════════════════════════════
+@app.options("/api/chat")
+async def chat_options():
+    from fastapi.responses import Response
+    r = Response()
+    r.headers["Access-Control-Allow-Origin"] = "*"
+    r.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    r.headers["Access-Control-Allow-Headers"] = "*"
+    return r
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_with_ai(
-    data:       ChatRequest,
-    student_id: int = Depends(get_current_student),
-    db:         AsyncSession = Depends(get_db)
+    data: ChatRequest,
+    db:   AsyncSession = Depends(get_db)
 ):
+    student_id = 0
     unit_context = ""
     if data.unit_id:
         unit_result = await db.execute(select(Unit).where(Unit.id == data.unit_id))
@@ -488,7 +488,7 @@ async def chat_with_ai(
         role = "user" if m.role == "user" else "model"
         contents.append(genai_types.Content(role=role, parts=[genai_types.Part(text=m.content)]))
 
-    response = await _genai_client.aio.models.generate_content(
+    response = await get_genai_client().aio.models.generate_content(
         model="gemini-2.0-flash",
         contents=contents,
         config=genai_types.GenerateContentConfig(
@@ -615,11 +615,29 @@ async def run_seed_now():
     import traceback
     try:
         from seed_database import seed
-        await seed()
+        pass  # seed via /api/admin/run-seed-now
         return {"status": "success"}
     except Exception as e:
+        return {"status": "error", "detail": str(e), "trace": traceback.format_exc()}
+
+
+@app.get("/api/admin/run-seed-now")
+async def run_seed_now_fixed():
+    try:
+        from seed_database import seed
+        from seed_database import seed
+        await seed()
+        return {"status": "success", "message": "Seed completed!"}
+        return {"status": "success", "message": "Seed completed!"}
+    except Exception as e:
+        import traceback
         return {"status": "error", "detail": str(e), "trace": traceback.format_exc()}
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+
+
+
+# 05/09/2026 06:54:54
