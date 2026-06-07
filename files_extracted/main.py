@@ -6,6 +6,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from sqlalchemy import select, func, and_, update
 from datetime import datetime, date
 from typing import List, Optional
@@ -59,6 +60,20 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await init_db()
+    async for db in get_db():
+        result = await db.execute(select(Unit))
+        unit = result.scalars().first()
+        if not unit:
+            from seed_database import seed
+            await seed()
+        break
+    async for db in get_db():
+        result = await db.execute(select(Unit))
+        unit = result.scalars().first()
+        if not unit:
+            from seed_database import seed
+            await seed()
+        break
     from seed_database import seed
     pass  # seed via /api/admin/run-seed-now
     from sqlalchemy import text
@@ -204,16 +219,9 @@ async def get_dialogues(lesson_id: int, db: AsyncSession = Depends(get_db)):
         select(Dialogue)
         .where(Dialogue.lesson_id == lesson_id)
         .order_by(Dialogue.dialogue_number)
+        .options(selectinload(Dialogue.lines))
     )
     dialogues = result.scalars().all()
-    # تحميل السطور لكل حوار
-    for d in dialogues:
-        lines_result = await db.execute(
-            select(DialogueLine)
-            .where(DialogueLine.dialogue_id == d.id)
-            .order_by(DialogueLine.line_order)
-        )
-        d.lines = lines_result.scalars().all()
     return dialogues
 
 
