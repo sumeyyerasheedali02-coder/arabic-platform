@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useState } from 'react'import { HashRouter, Routes, Route, Navigate } from 'react-router-dom''
 import { AuthProvider } from './context/AuthContext'
 import Sidebar from './components/Sidebar'
 import Header from './components/Header'
@@ -29,7 +28,7 @@ function AppLayout({ children }) {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+<HashRouter>
         <Routes>
                       <Route path="/landing" element={<Landing />} />
 <Route path="/login" element={<LoginRegister />} />
@@ -43,7 +42,7 @@ export default function App() {
           <Route path="/chat"              element={<AppLayout><ArabicChat /></AppLayout>} />
           <Route path="*"                  element={<Navigate to="/" replace />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </AuthProvider>
   )
 }
