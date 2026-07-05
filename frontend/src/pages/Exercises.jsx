@@ -27,10 +27,13 @@ function ExerciseCard({ exercise, onAnswer, isGuest }) {
     if (!value) return
 
     if (isGuest) {
-      // Guest: check locally without saving to DB
+      // Guest: real local check (same normalize logic as backend), no DB save
+      const normalize = (s) => (s || '').trim().toLowerCase()
+        .split('').filter(c => !(c >= '\u064B' && c <= '\u065F') && c !== '\u0640').join('').trim()
+      const ok = normalize(value) === normalize(exercise.correct_answer)
       setShowLoginHint(true)
-      setResult({ is_correct: false, correct_answer: exercise.correct_answer || '', points_earned: 0 })
-      onAnswer({ is_correct: false, points_earned: 0 })
+      setResult({ is_correct: ok, correct_answer: exercise.correct_answer || '', points_earned: 0 })
+      onAnswer({ is_correct: ok, points_earned: 0 })
       return
     }
 

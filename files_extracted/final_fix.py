@@ -1,57 +1,50 @@
-﻿import os
+﻿import asyncio, sys
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+from database import AsyncSessionLocal, Unit, Lesson, Exercise
+from sqlalchemy import select, text
 
-m = open("main.py", encoding="utf-8").read()
+async def run():
+    async with AsyncSessionLocal() as db:
+        # 1. تأكيد القاعدة: عدّ الوحدات
+        n = (await db.execute(select(Unit))).scalars().all()
+        print(f"عدد الوحدات في هذه القاعدة: {len(n)}  (يجب 48 = Railway)")
+        if len(n) != 48:
+            print("!!! قاعدة خاطئة - أوقفي ولا تكملي")
+            return
 
-old = '''@app.get("/api/units")
-async def get_units(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Unit).order_by(Unit.unit_number))
-    units = result.scalars().all()
-    if not units:
-        try:
-            from seed_database import seed
-            await seed()
-            result = await db.execute(select(Unit).order_by(Unit.unit_number))
-            units = result.scalars().all()
-        except:
-            pass
-    if not units:
-        import sys, os
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from book1_part1_data import BOOK_1_PART_1
-        return [{"id": i+1, "unit_number": u["number"], "title_ar": u["title_ar"], "title_tr": u["title_tr"], "description_ar": "", "description_tr": ""} for i, u in enumerate(BOOK_1_PART_1["units"])]
-    return units'''
+        # 2. انسخ التشكيل الصحيح من سؤال وحدة 1 العامل
+        u1 = (await db.execute(select(Unit).where(Unit.unit_number==1))).scalar_one()
+        l1 = (await db.execute(select(Lesson.id).where(Lesson.unit_id==u1.id))).scalars().all()
+        ex1 = (await db.execute(select(Exercise).where(Exercise.lesson_id.in_(l1)))).scalars().all()
+        sample = next((e.question_ar for e in ex1 if "رَتّ" in e.question_ar or "رَتِّ" in e.question_ar), None)
+        print(f"نموذج وحدة 1: {repr(sample[:15]) if sample else 'لا يوجد'}")
+        prefix = sample.split(":")[0] if sample else "رَتِّب الكلِمات"
+        print(f"البادئة المستخدمة: {repr(prefix)}")
 
-new = '''@app.get("/api/units")
-async def get_units(db: AsyncSession = Depends(get_db)):
-    from book1_part1_data import BOOK_1_PART_1
-    result = await db.execute(select(Unit).order_by(Unit.unit_number))
-    units = result.scalars().all()
-    if units:
-        return units
-    return [{"id": i+1, "unit_number": u["number"], "title_ar": u["title_ar"], "title_tr": u["title_tr"], "description_ar": "", "description_tr": ""} for i, u in enumerate(BOOK_1_PART_1["units"])]'''
+        ORDER = {
+            9: [("القميص / أشتري / هذا","أشتري هذا القميص"),("الكتاب / بكم / هذا","بكم هذا الكتاب"),("جميل / الثوب / هذا","هذا الثوب جميل"),("القلم / أريد / هذا","أريد هذا القلم"),("السعر / غالٍ / هذا","هذا السعر غالٍ")],
+        }
+        # احذف القديم الخاطئ في وحدة 9
+        u9 = (await db.execute(select(Unit).where(Unit.unit_number==9))).scalar_one()
+        nahw9 = (await db.execute(select(Lesson).where(Lesson.unit_id==u9.id, Lesson.lesson_type=="nahw"))).scalar_one()
+        old = (await db.execute(select(Exercise).where(Exercise.lesson_id==nahw9.id))).scalars().all()
+        for e in old:
+            if "الكلمات" in (e.question_ar or "") or "الكلِمات" in (e.question_ar or ""):
+                await db.delete(e)
+        await db.flush()
 
-if old in m:
-    m = m.replace(old, new)
-    print("replaced OK")
-else:
-    print("NOT FOUND - writing direct replacement")
-    m = m.replace(
-        '@app.get("/api/units")',
-        '@app.get("/api/units_old_disabled")'
-    )
-    m = m.replace(
-        'if __name__ == "__main__":',
-        '''@app.get("/api/units")
-async def get_units(db: AsyncSession = Depends(get_db)):
-    from book1_part1_data import BOOK_1_PART_1
-    result = await db.execute(select(Unit).order_by(Unit.unit_number))
-    units = result.scalars().all()
-    if units:
-        return units
-    return [{"id": i+1, "unit_number": u["number"], "title_ar": u["title_ar"], "title_tr": u["title_tr"], "description_ar": "", "description_tr": ""} for i, u in enumerate(BOOK_1_PART_1["units"])]
+        num = 500
+        for words, ans in ORDER[9]:
+            num += 1
+            db.add(Exercise(
+                unit_id=u9.id, lesson_id=nahw9.id, exercise_number=num,
+                exercise_type="fill_blank",
+                question_ar=f"{prefix}: {words}",
+                correct_answer=ans, options=None,
+                hint_ar="رتب الكلمات", difficulty=3, points=15,
+            ))
+        await db.commit()
+        print(f"\nتمت إضافة 5 أسئلة لوحدة 9 بالتشكيل: {repr(prefix)}")
+        print("افتحي وحدة 9 الآن وحدّثي بقوة")
 
-if __name__ == "__main__":'''
-    )
-
-open("main.py", "w", encoding="utf-8").write(m)
-print("Done!")
+asyncio.run(run())

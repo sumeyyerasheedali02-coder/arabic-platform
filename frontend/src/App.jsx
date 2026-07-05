@@ -11,6 +11,7 @@ import Exercises from './pages/Exercises'
 import Teacher from './pages/Teacher'
 import LessonDetail from './pages/LessonDetail'
 import ArabicChat from './pages/ArabicChat'
+import Landing from './pages/Landing'
 
 function AppLayout({ children }) {
   const [selectedUnit, setSelectedUnit] = useState(null)
@@ -30,8 +31,9 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<LoginRegister />} />
-          <Route path="/" element={<Navigate to="/lessons" replace />} />
+                      <Route path="/landing" element={<Landing />} />
+<Route path="/login" element={<LoginRegister />} />
+          <Route path="/" element={localStorage.getItem("token") ? <Navigate to="/lessons" replace /> : <Navigate to="/landing" replace />} />
           <Route path="/lessons"           element={<AppLayout><Lessons /></AppLayout>} />
           <Route path="/lessons/:lessonId" element={<AppLayout><LessonDetail /></AppLayout>} />
           <Route path="/exercises"         element={<AppLayout><Exercises /></AppLayout>} />

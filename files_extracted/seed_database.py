@@ -1,6 +1,8 @@
 from book1_part2_data import BOOK_1_PART_2
 from book2_part1_data import BOOK_2_PART_1
 from book2_part2_data import BOOK_2_PART_2
+from book3_part1_data import BOOK_3_PART_1
+from book3_part2_data import BOOK_3_PART_2
 """
 Seed database with Book 1 Part 1 — 8 real units from العربية بين يديك.
 Run once on a fresh database or to replace all content:
@@ -852,7 +854,9 @@ async def seed():
         b1p2 = BOOK_1_PART_2["units"]
         b2p1 = [dict(u, number=u["number"]+16) for u in BOOK_2_PART_1["units"]]
         b2p2 = BOOK_2_PART_2["units"]
-        all_units = b1p1 + b1p2 + b2p1 + b2p2
+        b3p1 = BOOK_3_PART_1["units"]
+        b3p2 = BOOK_3_PART_2["units"]
+        all_units = b1p1 + b1p2 + b2p1 + b2p2 + b3p1 + b3p2
         for u_data in all_units:
             grammar_text = " | ".join(u_data["grammar"])
             topics_text  = " | ".join(u_data["main_topics"])

@@ -1,4 +1,9 @@
-import { useState, useRef } from 'react'
+import sys
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+PATH = r"C:\Users\SD\Desktop\arabic_platform\frontend\src\pages\LoginRegister.jsx"
+
+CODE = r"""import { useState, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/client'
@@ -14,54 +19,9 @@ export default function LoginRegister() {
   const [year, setYear]           = useState(1)
   const [error, setError]         = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [lang, setLang] = useState('ar')
   const passwordRef               = useRef(null)
   const { login }                 = useAuth()
   const navigate                  = useNavigate()
-
-  const langText = {
-    ar: {
-      title: 'تسجيل الدخول',
-      subtitle: 'مرحباً بعودتك، أكمل رحلتك التعليمية',
-      email: 'البريد الإلكتروني',
-      password: 'كلمة المرور',
-      name: 'الاسم الكامل',
-      year: 'السنة الدراسية',
-      login: 'تسجيل الدخول',
-      signup: 'إنشاء الحساب',
-      guest: '{t.guest}',
-      back: '← العودة',
-      checking: 'جارٍ التحقق...',
-      newAccount: '{t.newAccount}',
-      newSub: '{t.newSub}',
-      hint: '{t.hint}',
-      loading: '{t.loading}',
-      welcome: 'مرحباً',
-      enterPwd: '{t.enterPwd}',
-      footer: '{t.footer}',
-    },
-    tr: {
-      title: 'Giriş Yap',
-      subtitle: 'Tekrar hoş geldin, öğrenme yolculuğuna devam et',
-      email: 'E-posta',
-      password: 'Şifre',
-      name: 'Ad Soyad',
-      year: 'Sınıf',
-      login: 'Giriş Yap',
-      signup: 'Yeni hesap oluştur',
-      guest: 'Misafir olarak gözat',
-      back: '← Geri',
-      checking: 'Kontrol ediliyor...',
-      newAccount: 'Yeni Hesap',
-      newSub: 'Bilgilerinizi tamamlayın',
-      hint: 'E-postanızı girin ve Tab veya Enter basın',
-      loading: 'Yükleniyor...',
-      welcome: 'Hoş geldin',
-      enterPwd: 'Şifrenizi girin',
-      footer: 'Karabük Üniversitesi — İlahiyat Fakültesi',
-    },
-  }
-  const t = langText[lang]
 
   const handleEmailBlur = async () => {
     const val = email.trim()
@@ -109,7 +69,7 @@ export default function LoginRegister() {
         })
       }
       login(res.data.access_token, { id: res.data.student_id, name: res.data.name })
-      navigate('/lessons')
+      navigate('/')
     } catch (err) {
       const d = err.response?.data?.detail
       setError(typeof d === 'string' ? d : '\u062a\u0623\u0643\u062f \u0645\u0646 \u0627\u0644\u0628\u0631\u064a\u062f \u0648\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 (6 \u0623\u062d\u0631\u0641 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644)')
@@ -140,7 +100,7 @@ export default function LoginRegister() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', direction: lang === 'ar' ? 'rtl' : 'ltr', fontFamily: "var(--aq-font-arabic)" }}>
+    <div style={{ minHeight: '100vh', display: 'flex', direction: 'rtl', fontFamily: "var(--aq-font-arabic)" }}>
 
       {/* ═══ HERO PANEL ═══ */}
       <div style={{
@@ -211,45 +171,7 @@ export default function LoginRegister() {
       }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
 
-          {/* Back + Language Switch */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <Link to="/landing" style={{
-            fontSize: 13, color: 'var(--aq-text-muted)', textDecoration: 'none',
-            fontFamily: lang === 'ar' ? "var(--aq-font-arabic)" : "var(--aq-font-sans)",
-            transition: 'color .2s',
-          }}
-            onMouseEnter={e => e.currentTarget.style.color = 'var(--aq-navy)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'var(--aq-text-muted)'}
-          >{t.back}</Link>
-          <div className="langSw" style={{
-            display: 'inline-flex', borderRadius: 999, border: '1px solid var(--aq-border)',
-            background: 'var(--aq-card)', padding: 3, fontSize: 13, fontWeight: 500,
-            boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-          }}>
-            <button type="button" onClick={() => setLang('ar')}
-              style={{
-                borderRadius: 999, padding: '6px 14px', border: 'none', cursor: 'pointer',
-                transition: 'all .2s', fontFamily: "var(--aq-font-arabic)",
-                background: lang === 'ar' ? 'var(--aq-navy)' : 'transparent',
-                color: lang === 'ar' ? '#FAF8F3' : 'var(--aq-text-muted)',
-                boxShadow: lang === 'ar' ? '0 2px 6px rgba(15,32,68,0.3)' : 'none',
-              }}>
-              العربية
-            </button>
-            <button type="button" onClick={() => setLang('tr')}
-              style={{
-                borderRadius: 999, padding: '6px 14px', border: 'none', cursor: 'pointer',
-                transition: 'all .2s', fontFamily: "var(--aq-font-sans)",
-                background: lang === 'tr' ? 'var(--aq-navy)' : 'transparent',
-                color: lang === 'tr' ? '#FAF8F3' : 'var(--aq-text-muted)',
-                boxShadow: lang === 'tr' ? '0 2px 6px rgba(15,32,68,0.3)' : 'none',
-              }}>
-              Türkçe
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile logo */}
+          {/* Mobile logo */}
           <div className="aq-mobile-logo" style={{ textAlign: 'center', marginBottom: 32 }}>
             <img src={logo} alt="Arabiq Akademi" width={60} height={60}
               style={{ width: 60, height: 60, margin: '0 auto 12px', display: 'block' }} />
@@ -275,8 +197,8 @@ export default function LoginRegister() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 28, margin: '0 auto 12px', border: '1px solid #BBF7D0',
                 }}>👋</div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--aq-navy)' }}>{t.welcome} {existingName}!</h2>
-                <p style={{ fontSize: 13, color: 'var(--aq-text-muted)', marginTop: 4 }}>{t.enterPwd}</p>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--aq-navy)' }}>مرحباً {existingName}!</h2>
+                <p style={{ fontSize: 13, color: 'var(--aq-text-muted)', marginTop: 4 }}>أدخل كلمة المرور للمتابعة</p>
               </div>
             )}
             {emailState === 'new' && (
@@ -289,8 +211,8 @@ export default function LoginRegister() {
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, fontWeight: 600, letterSpacing: '0.15em', color: '#C9A84C', marginBottom: 8 }}>
                   <span style={{ width: 32, height: 1, background: '#C9A84C', display: 'inline-block' }} />أكاديمي
                 </div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--aq-navy)' }}>{t.newAccount}</h2>
-                <p style={{ fontSize: 13, color: 'var(--aq-text-muted)', marginTop: 4 }}>{t.newSub}</p>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--aq-navy)' }}>حساب جديد</h2>
+                <p style={{ fontSize: 13, color: 'var(--aq-text-muted)', marginTop: 4 }}>أكمل بياناتك لبدء رحلة التعلّم</p>
               </div>
             )}
             {(emailState === 'idle' || emailState === 'checking') && (
@@ -299,9 +221,9 @@ export default function LoginRegister() {
                   <span style={{ width: 32, height: 1, background: '#C9A84C', display: 'inline-block' }} />أكاديمي
                 </div>
                 <h2 style={{ fontSize: 28, fontWeight: 700, color: 'var(--aq-navy)' }}>
-                  {emailState === 'checking' ? 'جارٍ التحقق...' : t.title}
+                  {emailState === 'checking' ? 'جارٍ التحقق...' : 'تسجيل الدخول'}
                 </h2>
-                <p style={{ fontSize: 13, color: 'var(--aq-text-muted)', marginTop: 6 }}>{t.subtitle}</p>
+                <p style={{ fontSize: 13, color: 'var(--aq-text-muted)', marginTop: 6 }}>أدخل بريدك الإلكتروني للبدء</p>
               </div>
             )}
 
@@ -309,7 +231,7 @@ export default function LoginRegister() {
 
               {/* Email */}
               <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>{t.email}</label>
+                <label style={labelStyle}>البريد الإلكتروني</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--aq-text-muted)', fontSize: 16, pointerEvents: 'none' }}>✉</span>
                   <input type="email" value={email}
@@ -332,7 +254,7 @@ export default function LoginRegister() {
               {/* Name (new) */}
               {emailState === 'new' && (
                 <div style={{ marginBottom: 18, animation: 'aq-fade-in .3s ease-out' }}>
-                  <label style={labelStyle}>{t.name}</label>
+                  <label style={labelStyle}>الاسم الكامل</label>
                   <input value={name} onChange={e => setName(e.target.value)} required placeholder="أدخل اسمك الكامل"
                     style={inputStyle}
                     onFocus={e => { e.target.style.borderColor = '#C9A84C'; e.target.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.12)' }}
@@ -343,7 +265,7 @@ export default function LoginRegister() {
               {/* Password */}
               {(emailState === 'existing' || emailState === 'new') && (
                 <div style={{ marginBottom: 18, animation: 'aq-fade-in .3s ease-out' }}>
-                  <label style={labelStyle}>{t.password}</label>
+                  <label style={labelStyle}>كلمة المرور</label>
                   <div style={{ position: 'relative' }}>
                     <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--aq-text-muted)', fontSize: 16, pointerEvents: 'none' }}>🔒</span>
                     <input ref={passwordRef} type={showPwd ? 'text' : 'password'} value={password}
@@ -362,7 +284,7 @@ export default function LoginRegister() {
               {/* Year (new) */}
               {emailState === 'new' && (
                 <div style={{ marginBottom: 18, animation: 'aq-fade-in .3s ease-out' }}>
-                  <label style={labelStyle}>{t.year}</label>
+                  <label style={labelStyle}>السنة الدراسية</label>
                   <select value={year} onChange={e => setYear(e.target.value)}
                     style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' }}>
                     {[1,2,3,4].map(y => <option key={y} value={y}>السنة {y}</option>)}
@@ -391,16 +313,16 @@ export default function LoginRegister() {
                   {submitting ? (
                     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                       <span style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'aq-spin .7s linear infinite', display: 'inline-block' }} />
-                      {t.loading}
+                      جارٍ التحميل...
                     </span>
-                  ) : emailState === 'existing' ? t.login + ' \u2190' : t.signup + ' \u2190'}
+                  ) : emailState === 'existing' ? 'تسجيل الدخول ←' : 'إنشاء الحساب ←'}
                   <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: 'var(--aq-gradient-gold)' }} />
                 </button>
               )}
 
               {emailState === 'idle' && (
                 <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--aq-text-muted)', marginTop: 12 }}>
-                  {t.hint}
+                  أدخل بريدك واضغط Tab أو Enter للمتابعة
                 </p>
               )}
             </form>
@@ -418,7 +340,7 @@ export default function LoginRegister() {
               }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.background = 'rgba(201,168,76,0.05)' }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)'; e.currentTarget.style.background = 'transparent' }}>
-                {t.guest}
+                تصفّح كضيف بدون تسجيل
               </Link>
             </div>
           </div>
@@ -426,7 +348,7 @@ export default function LoginRegister() {
           {/* Footer */}
           <div style={{ textAlign: 'center', marginTop: 24 }}>
             <div style={{ width: 48, height: 1, background: 'var(--aq-border)', margin: '0 auto 8px' }} />
-            <p style={{ fontSize: 12, color: 'var(--aq-text-muted)' }}>{t.footer}</p>
+            <p style={{ fontSize: 12, color: 'var(--aq-text-muted)' }}>جامعة كارابوك — كلية الإلهيات</p>
             <p style={{ fontSize: 10, letterSpacing: '0.2em', color: 'rgba(107,122,141,0.6)', marginTop: 4 }}>KARABÜK ÜNİVERSİTESİ</p>
           </div>
         </div>
@@ -483,3 +405,7 @@ function ArabesqueCorner() {
     </svg>
   )
 }
+"""
+
+open(PATH, "w", encoding="utf-8").write(CODE)
+print("\u2705 \u062a\u0645 \u062a\u0637\u0628\u064a\u0642 \u0627\u0644\u062a\u0635\u0645\u064a\u0645 \u0627\u0644\u062c\u062f\u064a\u062f \u0644\u0635\u0641\u062d\u0629 \u0627\u0644\u062f\u062e\u0648\u0644")

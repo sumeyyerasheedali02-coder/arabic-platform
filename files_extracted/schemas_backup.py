@@ -70,7 +70,6 @@ class ExerciseOut(BaseModel):
     exercise_number: int
     exercise_type:   str
     question_ar:     str
-    correct_answer:  Optional[str] = None
     question_tr:     Optional[str]
     options:         Optional[Any]
     hint_ar:         Optional[str]
