@@ -20,7 +20,7 @@ _genai_client = None
 def get_genai_client():
     global _genai_client
     if _genai_client is None:
-        _genai_client = genai.Client(api_key="AIzaSyCZkIl9teuFsTem4CCB1n2cIkVFg1VXZNg")
+       _genai_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
     return _genai_client
 
 from database import (

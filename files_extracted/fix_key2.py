@@ -1,5 +1,0 @@
-﻿m = open("main.py", encoding="utf-8").read()
-print("Before:", "os.getenv" in m)
-m = m.replace("os.getenv(\"GOOGLE_API_KEY\")", "\"AIzaSyCdMIFinbWLs3c6ZjyDXNPGGgRMzS5umGU\"")
-open("main.py", "w", encoding="utf-8").write(m)
-print("After:", "AIzaSyCdMIFinbWLs3c6ZjyDXNPGGgRMzS5umGU" in open("main.py", encoding="utf-8").read())
