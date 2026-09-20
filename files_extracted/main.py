@@ -489,7 +489,7 @@ async def chat_with_ai(
         contents.append(genai_types.Content(role=role, parts=[genai_types.Part(text=m.content)]))
 
     response = await get_genai_client().aio.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-lite",
         contents=contents,
         config=genai_types.GenerateContentConfig(
             system_instruction=system_prompt,
