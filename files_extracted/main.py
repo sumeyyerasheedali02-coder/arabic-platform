@@ -498,14 +498,15 @@ async def chat_with_ai(
     )
     reply = response.text
 
-    # حفظ الجلسة
-    session = AISession(
-        student_id=student_id,
-        unit_id=data.unit_id,
-        messages_count=len(data.messages) + 1,
-    )
-    db.add(session)
-    await db.commit()
+    # حفظ الجلسة (فقط للطلاب المسجّلين)
+    if student_id and student_id > 0:
+        session = AISession(
+            student_id=student_id,
+            unit_id=data.unit_id,
+            messages_count=len(data.messages) + 1,
+        )
+        db.add(session)
+        await db.commit()
 
     return ChatResponse(reply=reply, corrections=[])
 
