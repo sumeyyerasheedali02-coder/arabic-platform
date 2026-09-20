@@ -442,14 +442,7 @@ async def add_unit_to_srs(
 # ═══════════════════════════════════════════
 #  محادثة الذكاء الاصطناعي (AI Chat)
 # ═══════════════════════════════════════════
-@app.options("/api/chat")
-async def chat_options():
-    from fastapi.responses import Response
-    r = Response()
-    r.headers["Access-Control-Allow-Origin"] = "*"
-    r.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-    r.headers["Access-Control-Allow-Headers"] = "*"
-    return r
+
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_with_ai(
