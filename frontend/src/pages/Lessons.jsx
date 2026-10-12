@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, Link } from 'react-router-dom'
 import api from '../api/client'
 import { useAuth } from '../context/AuthContext'
@@ -49,28 +50,30 @@ function LessonPanel({ lesson, unitVocab, onClose }) {
     { key: 'vocab',   label: 'المفردات' },
   ]
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', direction: 'rtl' }}>
+  // Lock background scroll while the panel is open (prevents the page
+  // behind from scrolling on mobile and keeps the panel fully visible)
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  // Rendered into <body> so no ancestor layout can clip or offset it
+  return createPortal(
+    <div className="lesson-panel-overlay">
       {/* Backdrop */}
       <div
+        className="lesson-panel-backdrop"
         onClick={() => navigate(`/lessons/${lesson.id}`)}
-        style={{ position: 'absolute', inset: 0, background: 'rgba(15,32,68,.5)', backdropFilter: 'blur(3px)' }}
       />
 
-      {/* Panel — slides in from right */}
-      <div style={{
-        position: 'relative', marginRight: 'auto',
-        width: '100%', maxWidth: 540,
-        background: '#fff', borderLeft: '1px solid var(--border)',
-        height: '100%', display: 'flex', flexDirection: 'column',
-        boxShadow: '-8px 0 32px rgba(15,32,68,.12)',
-        animation: 'slideUp .25s ease-out',
-      }}>
+      {/* Panel — full screen on mobile, side panel on desktop */}
+      <div className="lesson-panel">
 
         {/* Panel header */}
         <div style={{
           padding: '12px 20px 14px', borderBottom: '1px solid var(--border)',
-          background: 'var(--navy)',
+          background: 'var(--navy)', flexShrink: 0,
         }}>
           {/* Back button row */}
           <button
@@ -125,6 +128,7 @@ function LessonPanel({ lesson, unitVocab, onClose }) {
         <div style={{
           display: 'flex', borderBottom: '1px solid var(--border)',
           background: '#fff', padding: '0 20px', gap: 4,
+          overflowX: 'auto', flexShrink: 0,
         }}>
           {TABS.map(({ key, label }) => (
             <button
@@ -143,7 +147,7 @@ function LessonPanel({ lesson, unitVocab, onClose }) {
         </div>
 
         {/* Tab content */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+        <div className="lesson-panel-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: 20 }}>
 
           {/* ── الدروس tab ───────────────────────────────── */}
           {tab === 'lessons' && (
@@ -456,7 +460,8 @@ function LessonPanel({ lesson, unitVocab, onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
