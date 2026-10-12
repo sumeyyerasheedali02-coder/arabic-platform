@@ -28,7 +28,10 @@ from database import (
     Unit, Lesson, Vocabulary, Dialogue, DialogueLine,
     Exercise, ExerciseAnswer, Student, StudentProgress, SRSCard, AISession
 )
-from auth import hash_password, verify_password, create_access_token, get_current_student
+from auth import (
+    hash_password, verify_password, create_access_token,
+    get_current_student, get_current_teacher, is_teacher_email,
+)
 from schemas import (
     StudentRegister, Token, EmailCheckResponse, UnitOut, LessonOut, VocabularyOut,
     DialogueOut, ExerciseOut, AnswerSubmit, AnswerResult,
@@ -117,7 +120,8 @@ async def register(data: StudentRegister, db: AsyncSession = Depends(get_db)):
     await db.refresh(student)
 
     token = create_access_token({"sub": str(student.id)})
-    return Token(access_token=token, student_id=student.id, name=student.name)
+    return Token(access_token=token, student_id=student.id, name=student.name,
+                 is_teacher=is_teacher_email(student.email))
 
 
 @app.get("/api/auth/check-email", response_model=EmailCheckResponse)
@@ -143,7 +147,8 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
     await db.commit()
 
     token = create_access_token({"sub": str(student.id)})
-    return Token(access_token=token, student_id=student.id, name=student.name)
+    return Token(access_token=token, student_id=student.id, name=student.name,
+                 is_teacher=is_teacher_email(student.email))
 
 
 # ═══════════════════════════════════════════
@@ -516,7 +521,7 @@ async def chat_with_ai(
 # ═══════════════════════════════════════════
 @app.get("/api/teacher/students", response_model=List[StudentSummary])
 async def get_all_students(
-    student_id: int = Depends(get_current_student),
+    teacher_id: int = Depends(get_current_teacher),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(Student).order_by(Student.created_at.desc()))
@@ -557,7 +562,7 @@ async def get_all_students(
 
 @app.get("/api/teacher/units/stats", response_model=List[UnitStats])
 async def get_unit_stats(
-    student_id: int = Depends(get_current_student),
+    teacher_id: int = Depends(get_current_teacher),
     db: AsyncSession = Depends(get_db)
 ):
     units_result = await db.execute(select(Unit).order_by(Unit.unit_number))

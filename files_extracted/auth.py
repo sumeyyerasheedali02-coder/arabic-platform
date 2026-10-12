@@ -8,13 +8,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import os
 from dotenv import load_dotenv
-from database import get_db
+from database import get_db, Student
 
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret")
 ALGORITHM  = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 10080))
+
+# بريد الأساتذة مفصول بفواصل — وحدهم يرون بيانات الطلاب الآخرين
+TEACHER_EMAILS = {
+    e.strip().lower() for e in os.getenv("TEACHER_EMAILS", "").split(",") if e.strip()
+}
+
+
+def is_teacher_email(email: str) -> bool:
+    return (email or "").strip().lower() in TEACHER_EMAILS
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -51,4 +60,18 @@ async def get_current_student(
         student_id: int = int(sub)
     except JWTError:
         raise credentials_exception
+    return student_id
+
+
+async def get_current_teacher(
+    student_id: int = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(Student).where(Student.id == student_id))
+    student = result.scalar_one_or_none()
+    if not student or not is_teacher_email(student.email):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="هذه الصفحة مخصصة للأستاذ فقط",
+        )
     return student_id

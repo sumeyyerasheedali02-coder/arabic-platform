@@ -117,7 +117,7 @@ export default function LoginRegister() {
           name, email: email.trim(), password, year: Number(year),
         })
       }
-      login(res.data.access_token, { id: res.data.student_id, name: res.data.name })
+      login(res.data.access_token, { id: res.data.student_id, name: res.data.name, is_teacher: !!res.data.is_teacher })
       navigate('/lessons')
     } catch (err) {
       const d = err.response?.data?.detail

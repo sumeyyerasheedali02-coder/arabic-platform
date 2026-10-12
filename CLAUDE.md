@@ -36,6 +36,7 @@ GOOGLE_API_KEY=...              # Gemini API — required for /api/chat
 DATABASE_URL=sqlite+aiosqlite:///./arabic_platform.db
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=10080
+TEACHER_EMAILS=teacher@karabuk.edu.tr   # comma-separated; only these accounts can use /api/teacher/*
 ```
 
 ## Architecture

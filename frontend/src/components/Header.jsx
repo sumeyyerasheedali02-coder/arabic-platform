@@ -6,8 +6,10 @@ const NAV = [
   { to: '/exercises', label: 'التدريبات' },
   { to: '/srs',       label: 'بطاقات الحفظ' },
   { to: '/chat',      label: 'محادثة AI' },
-  { to: '/teacher',   label: 'تقدمي' },
+  { to: '/dashboard', label: 'تقدمي' },
 ]
+// Only the teacher sees the students overview page
+const TEACHER_NAV = { to: '/teacher', label: 'لوحة الأستاذ' }
 
 export default function Header() {
   const { student, logout } = useAuth()
@@ -39,7 +41,7 @@ export default function Header() {
 
       {/* Nav links */}
       <nav style={{ display: 'flex', gap: 2, flex: 1 }}>
-        {NAV.map(({ to, label }) => {
+        {(student?.is_teacher ? [...NAV, TEACHER_NAV] : NAV).map(({ to, label }) => {
           const active = location.pathname === to || (to === '/lessons' && location.pathname.startsWith('/lessons'))
           return (
             <Link
