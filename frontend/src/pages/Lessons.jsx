@@ -513,7 +513,7 @@ export default function Lessons() {
   )
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 20px' }}>
+    <div className="lessons-page" style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 20px' }}>
 
       {/* Lesson panel overlay */}
       {openLesson && (
@@ -524,19 +524,20 @@ export default function Lessons() {
         />
       )}
 
-      <div style={{ display: 'flex', gap: 20 }}>
+      <div className="lessons-layout" style={{ display: 'flex', gap: 20 }}>
 
         {/* Units sidebar */}
-        <aside style={{ width: 200, flexShrink: 0 }}>
+        <aside className="lessons-units" style={{ width: 200, flexShrink: 0 }}>
           <div style={{ fontSize: 9, letterSpacing: '.1em', color: 'var(--muted)', fontWeight: 500, marginBottom: 10 }}>
             الوحدات الدراسية
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="lessons-units-list" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {units.map(unit => {
               const isActive = selectedUnit?.id === unit.id
               return (
                 <button
                   key={unit.id}
+                  className="lessons-unit-btn"
                   onClick={() => setSelectedUnit(unit)}
                   style={{
                     width: '100%', textAlign: 'right', padding: '10px 14px',
@@ -570,7 +571,7 @@ export default function Lessons() {
               {/* Unit header */}
               <div style={{
                 background: 'var(--navy)', borderRadius: 14,
-                padding: '18px 22px', marginBottom: 20,
+                padding: '18px 22px', marginBottom: 20, gap: 12, flexWrap: 'wrap',
                 display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
               }}>
                 <div>

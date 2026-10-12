@@ -129,7 +129,8 @@ async def check_email(email: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Student).where(Student.email == email))
     student = result.scalar_one_or_none()
     if student:
-        return EmailCheckResponse(exists=True, name=student.name)
+        # لا نُعيد الاسم حتى لا يُكشف اسم صاحب أي بريد لمن يعرف بريده
+        return EmailCheckResponse(exists=True)
     return EmailCheckResponse(exists=False)
 
 

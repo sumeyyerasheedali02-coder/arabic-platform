@@ -57,7 +57,7 @@ export default function Teacher() {
       </div>
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
         {[
           { label: 'إجمالي الطلاب',  value: totalStudents, icon: '👥' },
           { label: 'متوسط النقاط',   value: avgScore,       icon: '⭐' },

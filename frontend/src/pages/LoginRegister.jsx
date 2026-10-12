@@ -7,7 +7,6 @@ import logo from '../assets/logo.png'
 export default function LoginRegister() {
   const [email, setEmail]         = useState('')
   const [emailState, setEmailState] = useState('idle')
-  const [existingName, setExistingName] = useState('')
   const [name, setName]           = useState('')
   const [password, setPassword]   = useState('')
   const [showPwd, setShowPwd]     = useState(false)
@@ -38,7 +37,7 @@ export default function LoginRegister() {
       newSub: 'أكمل بياناتك',
       hint: 'أدخل بريدك الإلكتروني ثم اضغط «متابعة»',
       loading: 'جارٍ التحميل...',
-      welcome: 'مرحباً',
+      welcome: 'مرحباً بعودتك!',
       enterPwd: 'أدخل كلمة المرور',
       footer: 'جامعة كارابوك — كلية الإلهيات',
     },
@@ -60,7 +59,7 @@ export default function LoginRegister() {
       newSub: 'Bilgilerinizi tamamlayın',
       hint: 'E-postanızı girin ve «Devam et» düğmesine basın',
       loading: 'Yükleniyor...',
-      welcome: 'Hoş geldin',
+      welcome: 'Tekrar hoş geldin!',
       enterPwd: 'Şifrenizi girin',
       footer: 'Karabük Üniversitesi — İlahiyat Fakültesi',
     },
@@ -75,7 +74,6 @@ export default function LoginRegister() {
     try {
       const res = await api.get(`/auth/check-email?email=${encodeURIComponent(val)}`)
       if (res.data.exists) {
-        setExistingName(res.data.name)
         setEmailState('existing')
         setTimeout(() => passwordRef.current?.focus(), 80)
       } else {
@@ -129,7 +127,6 @@ export default function LoginRegister() {
 
   const resetEmail = () => {
     setEmailState('idle')
-    setExistingName('')
     setPassword('')
     setError('')
   }
@@ -284,7 +281,7 @@ export default function LoginRegister() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 28, margin: '0 auto 12px', border: '1px solid #BBF7D0',
                 }}>👋</div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--aq-navy)' }}>{t.welcome} {existingName}!</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--aq-navy)' }}>{t.welcome}</h2>
                 <p style={{ fontSize: 13, color: 'var(--aq-text-muted)', marginTop: 4 }}>{t.enterPwd}</p>
               </div>
             )}

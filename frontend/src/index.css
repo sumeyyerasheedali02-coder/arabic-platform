@@ -54,12 +54,77 @@ body {
    widen the viewport and fixed windows (lesson panel…) end up shifted/cut off. */
 @media (max-width: 768px) {
   html, body { max-width: 100%; overflow-x: hidden; }
-  .app-grid {
-    width: 100vw;
-    max-width: 100vw;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+}
+
+/* Header menu button + sidebar drawer backdrop: mobile only */
+.hdr-menu-btn, .sidebar-backdrop { display: none; }
+
+/* ═══ Mobile layout ═══ */
+@media (max-width: 768px) {
+  /* Single column; the sidebar becomes a slide-in drawer */
+  .app-grid { grid-template-columns: minmax(0, 1fr); }
+  .app-header, .app-main { grid-column: 1; }
+  .app-sidebar {
+    position: fixed;
+    top: 0; bottom: 0; right: 0;
+    width: 270px;
+    max-width: 85vw;
+    z-index: 160;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform .25s ease-out;
   }
+  .app-sidebar.open { transform: none; box-shadow: -8px 0 32px rgba(15,32,68,.25); }
+  .sidebar-backdrop {
+    display: block;
+    position: fixed; inset: 0;
+    z-index: 150;
+    background: rgba(15,32,68,.45);
+  }
+
+  /* Compact header: logo row on top, all nav links on a second row */
+  .app-grid { grid-template-rows: auto 1fr; }
+  .app-header {
+    padding: 8px 10px 0 !important;
+    gap: 8px !important;
+    flex-wrap: wrap;
+  }
+  .hdr-logo { flex: 1; align-items: flex-start !important; }
+  .hdr-nav {
+    order: 10;
+    flex: 1 1 100% !important;
+    padding: 6px 0 8px;
+  }
+  .hdr-menu-btn {
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; color: var(--navy);
+    font-size: 18px; cursor: pointer;
+  }
+  .hdr-logo { min-width: 0 !important; }
+  .hdr-logo-sub, .hdr-divider, .hdr-user-text { display: none !important; }
+  .hdr-nav {
+    overflow-x: auto;
+    min-width: 0;
+    scrollbar-width: none;
+  }
+  .hdr-nav::-webkit-scrollbar { display: none; }
+  .hdr-nav a { white-space: nowrap; flex-shrink: 0; }
+
+  /* Lessons page: units become a horizontal, scrollable row above the content */
+  .lessons-page { padding: 16px 12px !important; }
+  .lessons-layout { flex-direction: column; gap: 14px !important; }
+  .lessons-units { width: 100% !important; }
+  .lessons-units-list {
+    flex-direction: row !important;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .lessons-units-list::-webkit-scrollbar { display: none; }
+  .lessons-unit-btn { width: auto !important; flex-shrink: 0; white-space: nowrap; }
 }
 
 /* SRS card flip */
