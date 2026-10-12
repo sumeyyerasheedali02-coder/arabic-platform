@@ -29,16 +29,18 @@ export default function LoginRegister() {
       year: 'السنة الدراسية',
       login: 'تسجيل الدخول',
       signup: 'إنشاء الحساب',
-      guest: '{t.guest}',
+      next: 'متابعة',
+      invalidEmail: 'أدخل بريداً إلكترونياً صحيحاً',
+      guest: 'تصفّح كزائر',
       back: '← العودة',
       checking: 'جارٍ التحقق...',
-      newAccount: '{t.newAccount}',
-      newSub: '{t.newSub}',
-      hint: '{t.hint}',
-      loading: '{t.loading}',
+      newAccount: 'حساب جديد',
+      newSub: 'أكمل بياناتك',
+      hint: 'أدخل بريدك الإلكتروني ثم اضغط «متابعة»',
+      loading: 'جارٍ التحميل...',
       welcome: 'مرحباً',
-      enterPwd: '{t.enterPwd}',
-      footer: '{t.footer}',
+      enterPwd: 'أدخل كلمة المرور',
+      footer: 'جامعة كارابوك — كلية الإلهيات',
     },
     tr: {
       title: 'Giriş Yap',
@@ -49,12 +51,14 @@ export default function LoginRegister() {
       year: 'Sınıf',
       login: 'Giriş Yap',
       signup: 'Yeni hesap oluştur',
+      next: 'Devam et',
+      invalidEmail: 'Geçerli bir e-posta adresi girin',
       guest: 'Misafir olarak gözat',
       back: '← Geri',
       checking: 'Kontrol ediliyor...',
       newAccount: 'Yeni Hesap',
       newSub: 'Bilgilerinizi tamamlayın',
-      hint: 'E-postanızı girin ve Tab veya Enter basın',
+      hint: 'E-postanızı girin ve «Devam et» düğmesine basın',
       loading: 'Yükleniyor...',
       welcome: 'Hoş geldin',
       enterPwd: 'Şifrenizi girin',
@@ -84,7 +88,12 @@ export default function LoginRegister() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (emailState === 'idle' || emailState === 'checking') {
+    if (emailState === 'checking') return
+    if (emailState === 'idle') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        setError(t.invalidEmail)
+        return
+      }
       await handleEmailBlur()
       return
     }
@@ -108,7 +117,7 @@ export default function LoginRegister() {
           name, email: email.trim(), password, year: Number(year),
         })
       }
-      login(res.data.access_token, { id: res.data.student_id, name: res.data.name })
+      login(res.data.access_token, { id: res.data.student_id, name: res.data.name, is_teacher: !!res.data.is_teacher })
       navigate('/lessons')
     } catch (err) {
       const d = err.response?.data?.detail
@@ -377,26 +386,26 @@ export default function LoginRegister() {
                 </div>
               )}
 
-              {/* Submit */}
-              {(emailState === 'existing' || emailState === 'new') && (
-                <button type="submit" disabled={submitting}
-                  style={{
-                    width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer',
-                    background: 'var(--aq-gradient-royal)', boxShadow: 'var(--aq-shadow-elegant)',
-                    color: '#FAF8F3', fontSize: 16, fontWeight: 700, fontFamily: "var(--aq-font-arabic)",
-                    transition: 'all .2s', opacity: submitting ? 0.6 : 1, marginTop: 4, position: 'relative', overflow: 'hidden',
-                  }}
-                  onMouseEnter={e => { if (!submitting) e.target.style.transform = 'translateY(-1px)' }}
-                  onMouseLeave={e => e.target.style.transform = 'none'}>
-                  {submitting ? (
-                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                      <span style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'aq-spin .7s linear infinite', display: 'inline-block' }} />
-                      {t.loading}
-                    </span>
-                  ) : emailState === 'existing' ? t.login + ' \u2190' : t.signup + ' \u2190'}
-                  <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: 'var(--aq-gradient-gold)' }} />
-                </button>
-              )}
+              {/* Submit — "continue" until the email is checked, then login / sign-up */}
+              <button type="submit" disabled={submitting || emailState === 'checking'}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                  background: 'var(--aq-gradient-royal)', boxShadow: 'var(--aq-shadow-elegant)',
+                  color: '#FAF8F3', fontSize: 16, fontWeight: 700, fontFamily: "var(--aq-font-arabic)",
+                  transition: 'all .2s', opacity: (submitting || emailState === 'checking') ? 0.6 : 1, marginTop: 4, position: 'relative', overflow: 'hidden',
+                }}
+                onMouseEnter={e => { if (!submitting) e.target.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={e => e.target.style.transform = 'none'}>
+                {(submitting || emailState === 'checking') ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <span style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'aq-spin .7s linear infinite', display: 'inline-block' }} />
+                    {submitting ? t.loading : t.checking}
+                  </span>
+                ) : emailState === 'existing' ? t.login + ' \u2190'
+                  : emailState === 'new' ? t.signup + ' \u2190'
+                  : t.next + ' \u2190'}
+                <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: 'var(--aq-gradient-gold)' }} />
+              </button>
 
               {emailState === 'idle' && (
                 <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--aq-text-muted)', marginTop: 12 }}>

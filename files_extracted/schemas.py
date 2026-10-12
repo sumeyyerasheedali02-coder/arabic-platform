@@ -19,6 +19,7 @@ class Token(BaseModel):
     token_type:   str = "bearer"
     student_id:   int
     name:         str
+    is_teacher:   bool = False
 
 class EmailCheckResponse(BaseModel):
     exists: bool
