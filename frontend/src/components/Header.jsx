@@ -11,7 +11,7 @@ const NAV = [
 // Only the teacher sees the students overview page
 const TEACHER_NAV = { to: '/teacher', label: 'لوحة الأستاذ' }
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const { student, logout } = useAuth()
   const location  = useLocation()
   const navigate  = useNavigate()
@@ -26,21 +26,24 @@ export default function Header() {
       display: 'flex', alignItems: 'center', gap: 14,
       position: 'sticky', top: 0, zIndex: 50,
     }}>
+      {/* Menu button — mobile only (opens the sidebar drawer) */}
+      <button className="hdr-menu-btn" onClick={onMenuClick} aria-label="القائمة">☰</button>
+
       {/* Platform logo */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 170, flexShrink: 0 }}>
+      <div className="hdr-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 170, flexShrink: 0 }}>
         <div style={{ fontFamily: "'Amiri', serif", fontSize: 15, color: 'var(--navy)', lineHeight: 1.2 }}>
           مَنْصَّةُ تَعَلُّمِ الْعَرَبِيَّة
         </div>
-        <div style={{ fontSize: 8.5, color: 'var(--muted)', letterSpacing: '.1em', marginTop: 2 }}>
+        <div className="hdr-logo-sub" style={{ fontSize: 8.5, color: 'var(--muted)', letterSpacing: '.1em', marginTop: 2 }}>
           ARABIC LEARNING PLATFORM
         </div>
       </div>
 
       {/* Divider */}
-      <div style={{ width: 1, height: 28, background: 'var(--border)', flexShrink: 0 }} />
+      <div className="hdr-divider" style={{ width: 1, height: 28, background: 'var(--border)', flexShrink: 0 }} />
 
       {/* Nav links */}
-      <nav style={{ display: 'flex', gap: 2, flex: 1 }}>
+      <nav className="hdr-nav" style={{ display: 'flex', gap: 2, flex: 1 }}>
         {(student?.is_teacher ? [...NAV, TEACHER_NAV] : NAV).map(({ to, label }) => {
           const active = location.pathname === to || (to === '/lessons' && location.pathname.startsWith('/lessons'))
           return (
@@ -64,7 +67,7 @@ export default function Header() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         {student ? (
           <>
-            <div style={{ textAlign: 'right' }}>
+            <div className="hdr-user-text" style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text)' }}>{student.name}</div>
               <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>İlahiyat Fakültesi</div>
             </div>
@@ -79,7 +82,7 @@ export default function Header() {
           </>
         ) : (
           <>
-            <div style={{ textAlign: 'right' }}>
+            <div className="hdr-user-text" style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--muted)' }}>ضيف</div>
               <div style={{ fontSize: 9.5, color: '#bbb' }}>Guest Mode</div>
             </div>

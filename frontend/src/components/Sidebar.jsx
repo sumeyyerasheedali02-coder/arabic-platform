@@ -16,7 +16,7 @@ function KBULogo() {
   )
 }
 
-export default function Sidebar({ selectedUnit, onSelectUnit }) {
+export default function Sidebar({ selectedUnit, onSelectUnit, open }) {
   const { student, logout, token } = useAuth()
   const navigate = useNavigate()
   const [units, setUnits]         = useState([])
@@ -34,7 +34,7 @@ export default function Sidebar({ selectedUnit, onSelectUnit }) {
   const progressPct     = totalLessons > 0 ? Math.round((doneLessons / totalLessons) * 100) : 0
 
   return (
-    <aside className="app-sidebar" style={{
+    <aside className={`app-sidebar${open ? ' open' : ''}`} style={{
       background: 'var(--navy)',
       display: 'flex',
       flexDirection: 'column',
