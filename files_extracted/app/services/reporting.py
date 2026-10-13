@@ -1,48 +1,50 @@
-"""Aggregated figures for the teacher dashboard."""
+"""Aggregated figures for the teacher dashboard.
+
+Each report runs a fixed number of queries, whatever the number of students
+or units: totals are computed by the database with GROUP BY and matched to
+the rows in memory.
+"""
 from typing import List
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ExerciseAnswer, Lesson, Student, StudentProgress, Unit
 from app.schemas import StudentSummary, UnitStats
 
+COMPLETED = "completed"
+
 
 async def student_summaries(db: AsyncSession) -> List[StudentSummary]:
-    result = await db.execute(select(Student).order_by(Student.created_at.desc()))
-    students = result.scalars().all()
+    """Every account, newest first, with its points and completed lessons."""
+    students = (await db.execute(
+        select(Student).order_by(Student.created_at.desc())
+    )).scalars().all()
 
-    summaries = []
-    for s in students:
-        # إجمالي النقاط
-        score_result = await db.execute(
-            select(func.sum(ExerciseAnswer.points_earned))
-            .where(ExerciseAnswer.student_id == s.id)
-        )
-        total_score = score_result.scalar() or 0
+    # إجمالي النقاط: مجموع نقاط كل الإجابات المسجّلة
+    points = dict((await db.execute(
+        select(ExerciseAnswer.student_id, func.sum(ExerciseAnswer.points_earned))
+        .group_by(ExerciseAnswer.student_id)
+    )).all())
 
-        # عدد الدروس المكتملة
-        lessons_result = await db.execute(
-            select(func.count(StudentProgress.id))
-            .where(
-                and_(
-                    StudentProgress.student_id == s.id,
-                    StudentProgress.status == "completed",
-                )
-            )
-        )
-        lessons_done = lessons_result.scalar() or 0
+    # عدد الدروس المكتملة
+    lessons_done = dict((await db.execute(
+        select(StudentProgress.student_id, func.count(StudentProgress.id))
+        .where(StudentProgress.status == COMPLETED)
+        .group_by(StudentProgress.student_id)
+    )).all())
 
-        summaries.append(StudentSummary(
+    return [
+        StudentSummary(
             student_id=s.id,
             name=s.name,
             email=s.email,
-            total_score=total_score,
-            lessons_done=lessons_done,
+            total_score=points.get(s.id) or 0,
+            lessons_done=lessons_done.get(s.id) or 0,
             last_active=s.last_login,
-        ))
-
-    return summaries
+        )
+        for s in students
+    ]
 
 
 def completion_percent(completed_lessons: int, students: int, lessons_in_unit: int) -> float:
@@ -59,42 +61,33 @@ def completion_percent(completed_lessons: int, students: int, lessons_in_unit: i
 
 
 async def unit_stats(db: AsyncSession) -> List[UnitStats]:
-    units_result = await db.execute(select(Unit).order_by(Unit.unit_number))
-    units = units_result.scalars().all()
+    """Per unit: average progress score and how much of it the class completed."""
+    units = (await db.execute(select(Unit).order_by(Unit.unit_number))).scalars().all()
+    total_students = (await db.execute(select(func.count(Student.id)))).scalar() or 1
+
+    # متوسط النقاط وعدد الدروس المكتملة لكل وحدة
+    progress = {
+        unit_id: (average, completed)
+        for unit_id, average, completed in (await db.execute(
+            select(
+                StudentProgress.unit_id,
+                func.avg(StudentProgress.score),
+                func.sum(case((StudentProgress.status == COMPLETED, 1), else_=0)),
+            ).group_by(StudentProgress.unit_id)
+        )).all()
+    }
+    lessons_per_unit = dict((await db.execute(
+        select(Lesson.unit_id, func.count(Lesson.id)).group_by(Lesson.unit_id)
+    )).all())
+
     stats = []
-
     for unit in units:
-        # متوسط النقاط
-        avg_result = await db.execute(
-            select(func.avg(StudentProgress.score))
-            .where(StudentProgress.unit_id == unit.id)
-        )
-        avg_score = avg_result.scalar() or 0.0
-
-        # نسبة الإكمال
-        total_students = await db.execute(select(func.count(Student.id)))
-        total = total_students.scalar() or 1
-
-        completed_result = await db.execute(
-            select(func.count(StudentProgress.id)).where(
-                and_(
-                    StudentProgress.unit_id == unit.id,
-                    StudentProgress.status  == "completed",
-                )
-            )
-        )
-        completed = completed_result.scalar() or 0
-
-        lessons_result = await db.execute(
-            select(func.count(Lesson.id)).where(Lesson.unit_id == unit.id)
-        )
-        lessons_in_unit = lessons_result.scalar() or unit.total_lessons or 0
-
+        average, completed = progress.get(unit.id, (None, 0))
+        lessons_in_unit = lessons_per_unit.get(unit.id) or unit.total_lessons or 0
         stats.append(UnitStats(
             unit_number=unit.unit_number,
             title_ar=unit.title_ar,
-            avg_score=round(avg_score, 1),
-            completion_pct=completion_percent(completed, total, lessons_in_unit),
+            avg_score=round(average or 0.0, 1),
+            completion_pct=completion_percent(completed or 0, total_students, lessons_in_unit),
         ))
-
     return stats

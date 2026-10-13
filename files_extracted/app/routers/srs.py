@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_, select
+from sqlalchemy import and_, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -104,23 +104,23 @@ async def add_unit_to_srs(
     db:         AsyncSession = Depends(get_db),
 ):
     """إضافة جميع مفردات وحدة إلى بطاقات SRS للطالب"""
-    vocab_result = await db.execute(
-        select(Vocabulary).where(Vocabulary.unit_id == unit_id)
-    )
-    vocabs = vocab_result.scalars().all()
-    added = 0
-    for v in vocabs:
-        exists = await db.execute(
-            select(SRSCard).where(
-                and_(SRSCard.student_id == student_id, SRSCard.vocabulary_id == v.id)
-            )
-        )
-        if not exists.scalar_one_or_none():
-            db.add(SRSCard(
-                student_id=student_id,
-                vocabulary_id=v.id,
-                next_review=date.today().isoformat(),
-            ))
-            added += 1
+    words = (await db.execute(
+        select(Vocabulary.id).where(Vocabulary.unit_id == unit_id).order_by(Vocabulary.id)
+    )).scalars().all()
+    # Words of this unit the student already has a card for (one query, not one per word)
+    existing = set((await db.execute(
+        select(SRSCard.vocabulary_id).where(
+            SRSCard.student_id == student_id, SRSCard.vocabulary_id.in_(words))
+    )).scalars().all()) if words else set()
+
+    today = date.today().isoformat()
+    new_cards = [
+        {"student_id": student_id, "vocabulary_id": word, "next_review": today}
+        for word in words if word not in existing
+    ]
+    if new_cards:
+        # One multi-row INSERT; the remaining columns take their defaults
+        await db.execute(insert(SRSCard), new_cards)
     await db.commit()
+    added = len(new_cards)
     return {"added": added, "message": f"تمت إضافة {added} بطاقة جديدة"}
