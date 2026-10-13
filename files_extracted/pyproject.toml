@@ -1,0 +1,27 @@
+# Tooling configuration only; dependencies are in requirements.txt.
+
+[tool.ruff]
+target-version = "py311"
+line-length = 110
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# E/W pycodestyle, F pyflakes, I import order, B likely bugs
+select = ["E", "W", "F", "I", "B"]
+ignore = [
+    # FastAPI declares dependencies as argument defaults: `db = Depends(get_db)`
+    "B008",
+    # Column assignments are aligned in the models and schemas
+    "E221", "E241", "E251",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Content is data: long lines of Arabic and Turkish text are expected.
+"content/**/*.py" = ["E501"]
+# The suite sets up the environment before importing the application.
+"tests/_app.py" = ["E402"]
+# Test requests and fixtures read better on one line.
+"tests/*.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "content", "tools", "tests", "main"]

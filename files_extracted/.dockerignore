@@ -1,0 +1,18 @@
+# Keep local state and development files out of the production image.
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Never bake secrets or a local database into an image
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite3
+
+# Not needed at run time
+tests/
+pytest.ini
+requirements-dev.txt

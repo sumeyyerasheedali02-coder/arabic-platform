@@ -1,93 +1,84 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
-## Project Overview
+## Project
 
-Arabic language learning platform ("العربية بين يديك") for Turkish theology students at Karabük University. Built with a FastAPI backend and a React + Vite frontend. The AI tutor feature uses the Google Gemini API.
+Arabiq Akademi ("العربية بين يديك"): an Arabic learning platform for Turkish theology students at Karabük University. FastAPI backend in `files_extracted/`, React + Vite frontend in `frontend/`. The AI tutor uses Google Gemini.
 
-## Running the Servers
+Read `PROJECT_MAP.md` (Arabic) for the full map: routes, data model, content, and "where do I change X". This file only lists what you must know before editing.
 
-**Backend** (from `files_extracted/`):
+## Commands
+
+Backend (from `files_extracted/`, Python 3.12, virtualenv in `.venv`):
+
 ```bash
 uvicorn main:app --reload --port 8000
+pytest -q                 # 100 tests, throw-away SQLite database
+ruff check .
+python -m tools.seed --help            # content loading
+python -m tools.migrate --status       # schema migrations
+python -m tools.content_report         # read-only summary of a database
+python -m tools.teacher_accounts list  # teacher provisioning
 ```
 
-**Frontend** (from `frontend/`):
+Frontend (from `frontend/`, Node 22):
+
 ```bash
-npm run dev        # dev server on http://localhost:5173
-npm run build      # production build
-npm run lint       # ESLint
+npm run dev      # http://localhost:5173, /api proxied to localhost:8000
+npm run lint
+npm test         # node --test, pure logic only
+npm run build
 ```
 
-**Seed the database** (run once after first backend startup):
-```bash
-cd files_extracted
-python seed_database.py
-```
+## Hard rules
 
-The backend auto-creates `arabic_platform.db` (SQLite) on first startup via `init_db()`. Re-running `seed_database.py` will duplicate data — only run it on a fresh database.
+- **Never run a tool against a database you have not identified.** Every tool uses `DATABASE_URL` at the moment it runs. `tools.seed --replace` deletes every student's answers, progress and review cards.
+- **No secrets in tracked files.** Configuration comes from the environment (`files_extracted/.env.example`, `app/config.py`). Keys were leaked through helper scripts once; see `SECURITY.md`.
+- **No one-off patch scripts.** Edit the source. ~130 `fix_*.py`-style scripts were removed; do not reintroduce the pattern.
+- **Content is edited in `files_extracted/content/`**, never in the database by hand.
+- **Preserve the visual design.** Styling is mostly inline `style` objects; when splitting or moving a component, copy the values exactly. Arabic is RTL; Turkish/English text gets `dir="ltr"`.
+- Do not deploy or push without being asked.
 
-## Environment Variables (`files_extracted/.env`)
+## Backend architecture (`files_extracted/`)
 
-```
-SECRET_KEY=...                  # JWT signing key
-GOOGLE_API_KEY=...              # Gemini API — required for /api/chat
-DATABASE_URL=sqlite+aiosqlite:///./arabic_platform.db
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=10080
-TEACHER_EMAILS=teacher@karabuk.edu.tr   # comma-separated; only these accounts can use /api/teacher/*
-```
+- `main.py` only assembles the app (settings, lifespan, CORS, routers).
+- `app/config.py`: every environment variable, read once into a frozen `Settings`.
+- `app/database.py`: engine, session factory, `get_db`, `init_db` (create tables + apply migrations).
+- `app/models.py`: ORM models. `app/schemas.py`: Pydantic models.
+- `app/security.py`: bcrypt, JWT, `get_current_account` / `get_current_student` / `get_current_teacher`.
+- `app/routers/`: one module per feature (`auth`, `content`, `exercises`, `progress`, `srs`, `chat`, `teacher`). Routers handle HTTP only.
+- `app/services/`: reusable logic (`answers`, `exercise_categories`, `srs` (SM-2), `ai`, `reporting`).
+- `app/migrations.py`: ordered, recorded changes for existing databases.
+- `content/`: pure data (books, exercise sets, `labels.py`). No database access.
+- `tools/`: command-line tools (`seed`, `migrate`, `teacher_accounts`, `content_report`).
+- `tests/`: API-level tests. `tests/_app.py` is the only place that imports application modules for the suite and points it at a temporary database first.
 
-## Architecture
+Relationships: `Unit → Lesson → Dialogue → DialogueLine`, `Unit → Lesson → Exercise`, `Unit → Vocabulary ← SRSCard ← Student`, `Student → StudentProgress → (Unit, Lesson)`, `Student → ExerciseAnswer → Exercise`.
 
-### Backend (`files_extracted/`)
+### Things that bite
 
-- **`main.py`** — All FastAPI routes. No separate router files; everything is inline. Protected endpoints use `Depends(get_current_student)` from `auth.py`.
-- **`database.py`** — All SQLAlchemy async models and the `get_db` session dependency. `init_db()` is called on app startup.
-- **`auth.py`** — JWT creation/validation using `python-jose`. Password hashing uses `bcrypt` directly (not passlib — passlib 1.7.4 is incompatible with bcrypt 5.x). The `sub` claim in JWTs is stored as a **string** and converted to `int` on decode.
-- **`schemas.py`** — Pydantic v2 models for request/response. Uses `model_config = {"from_attributes": True}` for ORM serialisation.
-- **`srs.py`** — Pure SM-2 spaced repetition algorithm. No database access; takes and returns dataclasses.
-- **`unit_1.py`** — Flat Python dict with all content for Unit 1 (vocabulary, dialogues, exercises). New units follow this same structure under a `data/` directory.
+- **Schema changes need a migration.** `create_all` never alters an existing table. Change `app/models.py` *and* append to `MIGRATIONS` in `app/migrations.py` (statements must work on SQLite and PostgreSQL and be repeatable).
+- **SQLite does not enforce foreign keys; PostgreSQL does.** Anything that deletes rows must be tested on PostgreSQL (`TEST_DATABASE_URL`, database name containing `arabiq_test`).
+- **Column defaults exist only after flush.** A freshly constructed ORM object has `None` in defaulted columns (this caused a 500 in SRS review).
+- **bcrypt directly, not passlib** (passlib 1.7.4 breaks with bcrypt ≥ 4). Passwords over 72 bytes are rejected.
+- **JWT `sub` is a string** (`str(student.id)`); python-jose requires it.
+- **Async sessions cannot lazy-load.** Use `selectinload` (see dialogues).
+- **Arabic text comparison:** two strings can look identical and differ in the order of combining marks. Never compare vocalised Arabic exactly; normalise with `app/services/answers.normalize_answer`. Category texts are constants in `content/labels.py`.
+- **Teacher rights** = account e-mail listed in `TEACHER_EMAILS`. Those addresses cannot self-register; e-mail lookups are case-insensitive.
+- The login endpoint takes OAuth2 form encoding (`username`, `password`), not JSON.
+- Tests mock the AI provider by replacing `app.services.ai.get_client`; never call the real provider from tests.
 
-### Key backend relationships
+## Frontend architecture (`frontend/src/`)
 
-```
-Unit → Lesson → Dialogue → DialogueLine
-Unit → Lesson → Exercise
-Unit → Vocabulary ← SRSCard ← Student
-Student → StudentProgress → (Unit, Lesson)
-Student → ExerciseAnswer → Exercise
-Student → AISession
-```
+- `api/config.js` decides the backend address (`VITE_API_URL`; unset in development → relative `/api` through the Vite proxy). `api/client.js` is the only axios instance; it attaches the token and reports a rejected session.
+- `api/useApiData.js`: `useApiData(key, load)` → `{ data, loading, error, reload }`. Use it for every data fetch.
+- `auth/`: `AuthProvider` (inside the router), `useAuth`, `session.js` (stored login; pure, tested).
+- `layout/AppLayout.jsx` mounts `UnitsProvider` and `ProgressProvider` once; pages read `useUnits()` / `useProgress()`. The selected unit lives only there.
+- `features/<name>/`: one folder per page. Pure logic sits in `.js` files next to the components and is tested in `frontend/tests/`.
+- `components/`: `Spinner`, `ErrorState`, `BrandMark`.
+- `HashRouter`; pages are lazy-loaded in `App.jsx`. Guests can open every page except `/teacher`.
 
-All foreign keys use `ondelete="CASCADE"` except `Vocabulary.lesson_id` (`SET NULL`).
+## Adding content
 
-### Authentication flow
-
-Login/register both return a `Token` with `access_token`. Protected routes extract the student ID via `OAuth2PasswordBearer` → `get_current_student()`. The login endpoint uses OAuth2 form encoding (`application/x-www-form-urlencoded`), not JSON.
-
-### AI Chat (`POST /api/chat`)
-
-Uses `google.generativeai` (configured at module level in `main.py`). Sends the full message history each request — the backend splits it into `history[:-1]` and the last message for Gemini's `start_chat` / `send_message_async`. The system prompt injects unit vocabulary context when `unit_id` is provided.
-
-### Frontend (`frontend/src/`)
-
-- **`api/client.js`** — Axios instance with `baseURL: '/api'`. Request interceptor attaches Bearer token from localStorage. Response interceptor redirects to `/login` on 401, **except** for `/auth/` endpoints (to allow login error messages to surface).
-- **`context/AuthContext.jsx`** — JWT token and student info in React state + localStorage. `loading: true` until the initial localStorage check completes — `ProtectedRoute` waits for this before deciding to redirect.
-- **`App.jsx`** — All routes defined here. Protected pages are wrapped with `<ProtectedRoute><Layout>`.
-- **`pages/`** — Five pages: `LoginRegister`, `Dashboard`, `Lessons`, `Chat`, `SRSFlashcards`. Pages fetch their own data on mount; no global data store.
-
-The Vite dev server proxies `/api/*` to `http://localhost:8000` — no CORS configuration needed in development.
-
-### Adding a new unit
-
-1. Create `files_extracted/data/unit_N.py` following the structure of `unit_1.py`.
-2. Add a seed block in `seed_database.py` importing and inserting `UNIT_N`.
-3. Run `seed_database.py` against a fresh database (or write a migration).
-
-## Known Compatibility Issues
-
-- `passlib` must **not** be used with `bcrypt` — use `bcrypt` directly. `passlib 1.7.4` + `bcrypt >=4.0` causes a `ValueError` on every hash/verify call.
-- `python-jose` v3.5+ requires JWT `sub` to be a string. Always use `str(student.id)` when creating tokens and `int(sub)` when decoding.
-- `pydantic-core` has no pre-built wheel for Python 3.14. Install dependencies without pinned versions so pip resolves compatible wheels.
+See `files_extracted/content/README.md`. In short: edit the data module, try it on a scratch database with `tools.seed`, check with `tools.content_report`, then decide how to apply it to a database that students use.

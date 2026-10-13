@@ -26,4 +26,9 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    // Build tooling and the unit tests run in Node, not in the browser
+    files: ['*.config.js', 'tests/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
 ])

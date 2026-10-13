@@ -1,141 +1,145 @@
-# منصة العربية بين يديك — Arabic Learning Platform
+# الخادم (FastAPI)
 
-## هيكل المشروع
+## البنية
 
 ```
-arabic_platform/
-├── main.py              ← تطبيق FastAPI الرئيسي (جميع الـ API routes)
-├── database.py          ← نماذج قاعدة البيانات SQLAlchemy
-├── auth.py              ← نظام المصادقة JWT
-├── schemas.py           ← نماذج Pydantic للبيانات
-├── srs.py               ← خوارزمية SM-2 للحفظ الذكي
-├── seed_database.py     ← تعبئة قاعدة البيانات بالمحتوى
-├── requirements.txt     ← المكتبات المطلوبة
-├── .env                 ← متغيرات البيئة (لا ترفعه على GitHub)
-└── data/
-    └── unit_1.py        ← بيانات الوحدة الأولى من الكتاب
+files_extracted/
+├── main.py                  نقطة الدخول: يجمع الإعدادات ودورة الحياة و CORS والراوترات فقط
+├── app/                     كود التشغيل
+│   ├── config.py            كل متغيرات البيئة، تُقرأ مرة واحدة
+│   ├── database.py          المحرك والجلسات و init_db
+│   ├── models.py            نماذج الجداول
+│   ├── schemas.py           نماذج الطلبات والاستجابات
+│   ├── security.py          كلمات المرور، JWT، التحقق من الهوية والصلاحية
+│   ├── migrations.py        تغييرات المخطط على القواعد الموجودة
+│   ├── routers/             auth · content · exercises · progress · srs · chat · teacher
+│   └── services/            answers (تصحيح) · exercise_categories · srs (SM-2) · ai (Gemini) · reporting
+├── content/                 المحتوى التعليمي كبيانات خالصة (انظر content/README.md)
+├── tools/                   أدوات سطر الأوامر: seed · migrate · teacher_accounts · content_report
+├── tests/                   اختبارات API على قاعدة معزولة
+├── seed_database.py         نقطة دخول قديمة آمنة (تستدعي tools.seed)
+├── requirements.txt         اعتماديات الإنتاج (نسخ مثبّتة)
+├── requirements-dev.txt     + pytest و ruff
+└── Dockerfile               صورة الإنتاج (Python 3.12، المنفذ 8080)
 ```
 
----
+القاعدة: الراوتر يتعامل مع HTTP فقط، والمنطق القابل لإعادة الاستخدام في `services/`، ولا شيء في `content/` يلمس قاعدة البيانات.
 
-## إعداد البيئة (خطوة بخطوة)
+## الإعداد
 
-### 1. تثبيت Python 3.11+
 ```bash
-python --version   # تأكد أنها 3.11 أو أحدث
-```
-
-### 2. إنشاء بيئة افتراضية
-```bash
-python -m venv venv
-source venv/bin/activate      # Linux/Mac
-venv\Scripts\activate         # Windows
-```
-
-### 3. تثبيت المكتبات
-```bash
-pip install -r requirements.txt
-```
-
-### 4. إعداد متغيرات البيئة
-عدّل ملف `.env` وضع مفتاح Anthropic API الخاص بك:
-```env
-SECRET_KEY=اكتب-مفتاحاً-عشوائياً-طويلاً-هنا
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-احصل على مفتاح Anthropic من: https://console.anthropic.com
-
-### 5. تعبئة قاعدة البيانات
-```bash
-python seed_database.py
-```
-هذا ينشئ `arabic_platform.db` ويملأها بمحتوى الوحدة الأولى.
-
-### 6. تشغيل الخادم
-```bash
-python main.py
-# أو
+python -m venv .venv
+.venv\Scripts\activate                 # Linux/macOS: source .venv/bin/activate
+pip install -r requirements-dev.txt
+copy .env.example .env
 uvicorn main:app --reload --port 8000
 ```
 
-### 7. اختبار الـ API
-افتح المتصفح على:
-- **الوثائق التفاعلية:** http://localhost:8000/docs
-- **الوثائق البديلة:** http://localhost:8000/redoc
+استخدم Python 3.12. النسخ المثبّتة في `requirements.txt` لا تتوفر لها حزم جاهزة على 3.13 وما بعدها.
 
----
+### متغيرات البيئة
 
-## نقاط الـ API الرئيسية
+كلها موثّقة في [.env.example](.env.example) وتُقرأ في [app/config.py](app/config.py).
 
-### المصادقة
-| Method | Endpoint              | الوظيفة              |
-|--------|-----------------------|----------------------|
-| POST   | /api/auth/register    | تسجيل طالب جديد     |
-| POST   | /api/auth/login       | تسجيل الدخول         |
+| المتغير | مطلوب؟ | الوظيفة |
+|---|---|---|
+| `SECRET_KEY` | نعم في الإنتاج | مفتاح توقيع رموز الدخول. إن غاب استُخدم مفتاح مؤقت عشوائي (يسجّل الجميع خروجاً عند كل إعادة تشغيل) |
+| `DATABASE_URL` | نعم في الإنتاج | الافتراضي SQLite محلي. عناوين `postgres://` تُحوَّل تلقائياً إلى asyncpg |
+| `GOOGLE_API_KEY` | للمساعد | مفتاح Gemini. بدونه يجيب المساعد «غير مفعّل» |
+| `TEACHER_EMAILS` | للوحة الأستاذ | عناوين الأساتذة مفصولة بفواصل |
+| `CORS_ORIGINS` | اختياري | المواقع المسموح لها باستدعاء الـ API |
+| `GEMINI_MODEL` | اختياري | اسم النموذج |
+| `SEED_ON_EMPTY_DB` | اختياري | `true` (الافتراضي): تعبئة المحتوى الأساسي عند الإقلاع إن كانت القاعدة فارغة تماماً |
+| `ENVIRONMENT` | اختياري | `production` يمنع الإقلاع دون `SECRET_KEY` حقيقي |
+| `ACCESS_TOKEN_EXPIRE_MINUTES`, `ALGORITHM` | اختياري | مدة الرمز (7 أيام) وخوارزمية التوقيع |
 
-### المحتوى
-| Method | Endpoint                          | الوظيفة              |
-|--------|-----------------------------------|----------------------|
-| GET    | /api/units                        | جميع الوحدات         |
-| GET    | /api/units/{id}/lessons           | دروس الوحدة          |
-| GET    | /api/units/{id}/vocabulary        | مفردات الوحدة        |
-| GET    | /api/lessons/{id}/dialogues       | حوارات الدرس         |
-| GET    | /api/units/{id}/exercises         | تمارين الوحدة        |
+## واجهات الـ API
 
-### التفاعل
-| Method | Endpoint                          | الوظيفة              |
-|--------|-----------------------------------|----------------------|
-| POST   | /api/exercises/submit             | إرسال إجابة تمرين   |
-| POST   | /api/chat                         | محادثة مع الذكاء AI  |
-| GET    | /api/me/progress                  | تقدم الطالب          |
-| GET    | /api/me/srs/due                   | بطاقات SRS للمراجعة  |
-| POST   | /api/me/srs/review                | تسجيل مراجعة بطاقة  |
+الوثائق التفاعلية على `/docs`. كل المسارات تحت `/api`.
 
-### لوحة الأستاذ
-| Method | Endpoint                          | الوظيفة              |
-|--------|-----------------------------------|----------------------|
-| GET    | /api/teacher/students             | جميع الطلاب وتقدمهم |
-| GET    | /api/teacher/units/stats          | إحصائيات الوحدات    |
+| الطريقة | المسار | الصلاحية |
+|---|---|---|
+| POST | `/auth/register` · `/auth/login` | عام. الدخول بصيغة form (`username`, `password`) لا JSON |
+| GET | `/auth/check-email` | عام |
+| GET | `/auth/me` | مسجّل — يتحقق من الرمز ويعيد الاسم وصفة الأستاذ |
+| GET | `/units` · `/units/{id}` · `/units/{id}/lessons` · `/units/{id}/vocabulary` · `/units/{id}/exercises` | عام |
+| GET | `/lessons/{id}` · `/lessons/{id}/dialogues` · `/vocabulary/search?q=` | عام |
+| POST | `/exercises/submit` | مسجّل — يصحّح ويحفظ الإجابة |
+| GET / POST | `/me/progress` · `/me/progress/update` | مسجّل |
+| GET / POST | `/me/srs/due` · `/me/srs/review` · `/me/srs/add-unit/{unit_id}` | مسجّل |
+| POST | `/chat` | عام |
+| GET | `/teacher/students` · `/teacher/units/stats` | أستاذ |
 
----
+لا توجد مسارات إدارية عبر HTTP: كل العمليات الإدارية من سطر الأوامر.
 
-## اختبار سريع بـ curl
+## الأدوات (`python -m tools.<name>`)
+
+كلها تعمل على القاعدة المحددة في `DATABASE_URL`. **تأكد من قيمته قبل التشغيل.**
+
+### `tools.seed` — المحتوى
 
 ```bash
-# تسجيل طالب
-curl -X POST http://localhost:8000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"أحمد يلدز","email":"ahmed@example.com","password":"123456"}'
-
-# الحصول على الوحدات
-curl http://localhost:8000/api/units
-
-# الحصول على مفردات الوحدة الأولى
-curl http://localhost:8000/api/units/1/vocabulary
+python -m tools.seed                      # المحتوى الأساسي في قاعدة فارغة؛ لا يفعل شيئاً إن وُجد محتوى
+python -m tools.seed --with-supplements   # + مجموعات التمارين الإضافية (المجموع 4056 تمريناً)
+python -m tools.seed --supplements-only   # إضافة/إعادة بناء المجموعات الإضافية على محتوى موجود
+python -m tools.seed --replace --yes-delete-student-activity
 ```
 
----
+- الأمر الأخير **يحذف إجابات كل الطلاب وتقدّمهم وبطاقاتهم** (الحسابات تبقى)، لأنها تشير إلى صفوف المحتوى. لا يعمل بدون علم التأكيد.
+- `--supplements-only` يتوقف إن كانت هناك إجابات مسجّلة على التمارين التي سيعيد بناءها؛ أضف `--yes-delete-affected-answers` فقط إن كان فقدانها مقبولاً.
+- كل تشغيل معاملة واحدة: إن فشل شيء تبقى القاعدة كما كانت.
 
-## الخطوة التالية: الواجهة الأمامية
+التفاصيل ومصادر المحتوى في [content/README.md](content/README.md).
 
-بعد تشغيل الخادم، الخطوة التالية هي بناء الواجهة بـ React.js.
-مجلد الواجهة سيكون: `arabic_platform_frontend/`
+### `tools.content_report` — ماذا في القاعدة؟
 
----
+```bash
+python -m tools.content_report [--units]
+```
 
-## إضافة وحدات جديدة من الكتاب
+قراءة فقط (آمن على الإنتاج). يعرض الأعداد حسب النوع والتصنيف ونطاق الأرقام، ويقارنها بما تنتجه `tools.seed`، وينبّه إلى بقايا مثل سؤال التجربة `[تجربة]`.
 
-1. أنشئ ملف `data/unit_2.py` بنفس هيكل `unit_1.py`
-2. أضف الوحدة في `seed_database.py`
-3. شغّل السكريبت مجدداً
+### `tools.migrate` — مخطط القاعدة
 
----
+```bash
+python -m tools.migrate --status    # ما المطبَّق وما المعلّق
+python -m tools.migrate             # إنشاء الجداول الناقصة وتطبيق الترحيلات المعلّقة
+```
 
-## التقنيات المستخدمة
+الخادم يفعل ذلك تلقائياً عند الإقلاع، فالتشغيل اليدوي اختياري. لا يحذف بيانات أبداً.
 
-- **Backend:** FastAPI + SQLAlchemy + SQLite (أو PostgreSQL في الإنتاج)
-- **Auth:** JWT (python-jose) + bcrypt (passlib)
-- **AI:** Anthropic Claude API
-- **SRS:** خوارزمية SM-2
-- **Frontend (قادم):** React.js + Tailwind CSS
+**لإضافة تغيير على جدول موجود** (فهرس، عمود): عدّله في `app/models.py` **و** أضف ترحيلاً جديداً في آخر قائمة `MIGRATIONS` في [app/migrations.py](app/migrations.py). `create_all` لا يعدّل الجداول الموجودة، فبدون الترحيل لن يصل التغيير إلى الإنتاج. القواعد مكتوبة أعلى ذلك الملف.
+
+### `tools.teacher_accounts` — حسابات الأساتذة
+
+```bash
+python -m tools.teacher_accounts list
+python -m tools.teacher_accounts create --email teacher@karabuk.edu.tr --name "الاسم"
+python -m tools.teacher_accounts set-password --email teacher@karabuk.edu.tr
+```
+
+كلمة المرور تُطلب تفاعلياً (أو من متغير بيئة عبر `--password-env`). العناوين المدرجة في `TEACHER_EMAILS` لا يمكن تسجيلها من الواجهة العامة.
+
+## الاختبارات
+
+```bash
+pytest -q                                   # SQLite مؤقتة
+ruff check .
+```
+
+- `tests/_app.py` يوجّه `DATABASE_URL` إلى ملف مؤقت **قبل** استيراد التطبيق، ويتأكد `conftest.py` من ذلك قبل أي اختبار.
+- كل اختبار يبدأ بمحتوى صغير ثابت (وحدتان) يُبنى في `conftest.py`.
+- مزوّد Gemini لا يُستدعى أبداً: `fake_ai` يستبدله.
+- للتشغيل على PostgreSQL أنشئ قاعدة خاصة بالاختبار يحتوي اسمها على `arabiq_test` (الاختبارات تمسح كل جداولها):
+
+```bash
+set TEST_DATABASE_URL=postgresql+asyncpg://user@localhost:5432/arabiq_test
+pytest -q
+```
+
+## ملاحظات توافق
+
+- bcrypt يُستخدم مباشرة لا عبر passlib (passlib 1.7.4 لا يعمل مع bcrypt 4 وما بعده).
+- حقل `sub` في JWT نص دائماً (`str(student.id)`)؛ python-jose يشترط ذلك.
+- الحوارات تُحمَّل مع سطورها بـ `selectinload`؛ التحميل الكسول غير ممكن في الجلسات غير المتزامنة.
+- SQLite لا يفرض المفاتيح الخارجية افتراضياً، و PostgreSQL يفرضها: اختبر ما يحذف صفوفاً على PostgreSQL أيضاً.

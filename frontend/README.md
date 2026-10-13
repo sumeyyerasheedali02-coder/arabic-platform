@@ -1,16 +1,54 @@
-# React + Vite
+# الواجهة (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+```bash
+npm ci
+npm run dev        # http://localhost:5173
+npm run lint
+npm test           # اختبارات المنطق الخالص (node --test)
+npm run build      # الناتج في dist/
+npm run preview    # معاينة ناتج البناء
+```
 
-Currently, two official plugins are available:
+## الاتصال بالخادم
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+مكان واحد يحدده: [src/api/config.js](src/api/config.js).
 
-## React Compiler
+- **التطوير:** لا تضبط شيئاً. الطلبات تذهب إلى المسار النسبي `/api` ويحوّلها Vite إلى `http://localhost:8000` (غيّره بـ `VITE_DEV_API_TARGET` إن لزم).
+- **الإنتاج:** `VITE_API_URL` = عنوان الخادم العام (بدون `/api` وبدون شرطة في آخره). يُضبط في لوحة الاستضافة ويُدمج وقت البناء. البناء يطبع تحذيراً إن غاب.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+كل الطلبات تمر عبر [src/api/client.js](src/api/client.js): يرفق رمز الدخول، وإذا رفض الخادم الرمز يسجّل الخروج وينقل الطالب إلى صفحة الدخول.
 
-## Expanding the ESLint configuration
+## البنية
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```
+src/
+├── main.jsx · App.jsx        الإقلاع والمسارات (كل صفحة تُحمَّل عند أول زيارة)
+├── index.css                 متغيرات الألوان والخطوط، شبكة التطبيق، قواعد الهاتف
+├── api/                      config · client · useApiData (تحميل البيانات: loading / error / reload)
+├── auth/                     AuthProvider · useAuth · session (قراءة وكتابة الدخول المخزّن)
+├── layout/                   AppLayout · Header · Sidebar
+├── components/               مكونات مشتركة: Spinner · ErrorState · BrandMark
+└── features/
+    ├── units/                الوحدات والوحدة المختارة (مصدر واحد للجميع)
+    ├── progress/             تقدّم الطالب
+    ├── landing/ · auth/      الصفحة التعريفية · الدخول والتسجيل
+    ├── lessons/              صفحة الدروس، نافذة الدرس، صفحة الدرس المستقلة
+    ├── exercises/            التمارين: الصفحة، البطاقة، الملخص، الفلاتر، حساب الجلسة
+    ├── srs/ · chat/          بطاقات المراجعة · المساعد
+    └── dashboard/ · teacher/ تقدّمي · لوحة الأستاذ
+tests/                        اختبارات Node للملفات الخالية من React
+```
+
+## أنماط متّبعة
+
+- **البيانات المشتركة** (الوحدات، الوحدة المختارة، التقدّم) تُحمَّل مرة واحدة في `AppLayout` وتُقرأ بـ `useUnits()` و `useProgress()`. لا تجلب `/units` من داخل صفحة.
+- **تحميل بيانات صفحة:** `useApiData(key, load)` يعطي `{ data, loading, error, reload }` ويتجاهل الرد المتأخر إذا تغيّر المفتاح. اعرض `<CenteredSpinner>` عند التحميل و `<ErrorState onRetry>` عند الخطأ.
+- **لا `fetch` ولا عناوين خادم داخل المكونات.** استخدم `api` من `src/api/client.js`.
+- **المنطق الخالص** (حساب نتيجة الجلسة، تصحيح إجابة الضيف، صياغة الأيام) في ملفات `.js` بلا React وله اختبارات في `tests/`.
+- **التنسيق** في معظمه `style` داخل JSX مع متغيرات CSS من `index.css` (`--navy`, `--gold`, `--aq-*`). عند تقسيم مكوّن انقل القيم كما هي؛ تغيير CSS العام لا يكفي لتغيير صفحة.
+- **الاتجاه:** الصفحة RTL افتراضياً؛ النص التركي والإنجليزي يأخذ `dir="ltr"`.
+- **التوجيه:** `HashRouter` (المسار بعد `#`) لأن الاستضافة ثابتة.
+
+## الشعار
+
+`components/BrandMark.jsx` يرسم العلامة بـ SVG. ملف `logo.png` الذي كان في المستودع لم يكن صورة صالحة فحُذف. لاستخدام ملف شعار حقيقي: ضعه في `src/assets/` واعرضه داخل `BrandMark` (كل الصفحات تستخدم هذا المكوّن).
