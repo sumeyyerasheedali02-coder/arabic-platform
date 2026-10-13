@@ -8,6 +8,10 @@ export const TYPE_LABELS = {
   form_sentence:   'كون جملة',
   respond:         'اجب بالعربية',
   match:           'وصل المعاني',
+  synonym:         'مترادفات',
+  antonym:         'متعاكسات',
+  plural:          'الجمع',
+  comprehension:   'استيعاب قرائي',
 }
 
 export const FILTER_OPTIONS = [
@@ -24,12 +28,12 @@ export const FILTER_OPTIONS = [
   { value: 'word_order',      label: 'ترتيب كلمات' },
 ]
 
+// Filters that follow Exercise.category, which the server derives from the
+// content. The other filters follow Exercise.exercise_type.
+const CATEGORY_FILTERS = new Set(['synonym', 'antonym', 'plural', 'comprehension', 'word_order'])
+
 export function matchesFilter(exercise, filter) {
   if (filter === 'all') return true
-  if (filter === 'synonym')      return exercise.hint_ar === 'مترادف'
-  if (filter === 'antonym')      return exercise.hint_ar === 'ضد / متعاكس'
-  if (filter === 'plural')       return exercise.hint_ar === 'جمع الكلمة'
-  if (filter === 'comprehension') return exercise.hint_ar === 'استيعاب قرائي'
-  if (filter === 'word_order')   return exercise.question_ar && exercise.question_ar.includes('رَتِّب')
+  if (CATEGORY_FILTERS.has(filter)) return exercise.category === filter
   return exercise.exercise_type === filter
 }

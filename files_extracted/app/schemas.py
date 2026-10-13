@@ -84,6 +84,8 @@ class ExerciseOut(BaseModel):
     lesson_id:       Optional[int]
     exercise_number: int
     exercise_type:   str
+    # synonym | antonym | plural | comprehension | word_order | null
+    category:        Optional[str] = None
     question_ar:     str
     correct_answer:  Optional[str] = None
     question_tr:     Optional[str]

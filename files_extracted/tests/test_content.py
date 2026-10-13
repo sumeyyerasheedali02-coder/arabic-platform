@@ -68,3 +68,7 @@ async def test_exercises_are_listed_and_filterable(client, content):
     assert {e["id"] for e in blanks} == {content.ex_blank, content.ex_order}
     hard = (await client.get(url, params={"difficulty": 3})).json()
     assert {e["id"] for e in hard} == {content.ex_synonym, content.ex_order}
+
+    categories = {e["id"]: e["category"] for e in everything}
+    assert categories == {content.ex_choice: None, content.ex_true_false: None, content.ex_blank: None,
+                          content.ex_synonym: "synonym", content.ex_order: "word_order"}

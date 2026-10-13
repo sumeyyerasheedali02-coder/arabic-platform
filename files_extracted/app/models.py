@@ -121,6 +121,12 @@ class Exercise(Base):
     lesson           = relationship("Lesson", back_populates="exercises")
     answers          = relationship("ExerciseAnswer", back_populates="exercise", cascade="all, delete")
 
+    @property
+    def category(self):
+        """What the exercise practises (synonym, word_order, …); not a column."""
+        from app.services.exercise_categories import exercise_category
+        return exercise_category(self.exercise_type, self.hint_ar, self.question_ar)
+
 
 # ─────────────────────────────────────────
 #  الطلاب

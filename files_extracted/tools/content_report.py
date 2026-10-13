@@ -16,8 +16,7 @@ from sqlalchemy import func, select
 
 from app.database import AsyncSessionLocal
 from app.models import Dialogue, DialogueLine, Exercise, Lesson, Unit, Vocabulary
-from content import exercises as sets
-from tools.seed import SUPPLEMENT_NUMBERS
+from app.services.exercise_categories import exercise_category
 
 EXPECTED_BASE = dict(units=48, lessons=144, vocabulary=998, dialogues=140,
                      dialogue_lines=989, exercises=2129)
@@ -41,14 +40,15 @@ async def report(per_unit: bool) -> int:
         lesson_type = dict((await db.execute(select(Lesson.id, Lesson.lesson_type))).all())
         rows = (await db.execute(select(
             Exercise.unit_id, Exercise.lesson_id, Exercise.exercise_number,
-            Exercise.exercise_type, Exercise.question_ar))).all()
+            Exercise.exercise_type, Exercise.question_ar, Exercise.hint_ar))).all()
 
-    by_type, by_range = Counter(), Counter()
+    by_type, by_range, by_category = Counter(), Counter(), Counter()
     per_unit_types = defaultdict(Counter)
     problems = []
     unit_number = {unit.id: unit.unit_number for unit in units}
-    for unit_id, lesson_id, number, kind, question in rows:
+    for unit_id, lesson_id, number, kind, question, hint in rows:
         by_type[kind] += 1
+        by_category[exercise_category(kind, hint, question) or "(none)"] += 1
         in_grammar_lesson = lesson_type.get(lesson_id) == "nahw"
         bucket = _bucket(number) if in_grammar_lesson else "base/grammar 1-499"
         by_range[bucket] += 1
@@ -56,14 +56,12 @@ async def report(per_unit: bool) -> int:
         where = f"unit {unit_number.get(unit_id, '?')} exercise {number}"
         if "[تجربة]" in (question or ""):
             problems.append(f"{where}: leftover test question {question!r}")
-        if in_grammar_lesson and SUPPLEMENT_NUMBERS[0] <= number <= 599 \
-                and not (question or "").startswith(sets.WORD_ORDER_PREFIX):
-            problems.append(f"{where}: word-order question does not start with the standard prefix")
         if bucket == "superseded extras 901-999":
             problems.append(f"{where}: belongs to an extra set that the enrichment set replaced")
 
     print("Rows:", totals)
     print("Exercises by type:", dict(by_type.most_common()))
+    print("Exercises by category (filters of the exercises page):", dict(by_category.most_common()))
     print("Exercises by number range:", dict(by_range))
     if per_unit:
         for unit in units:

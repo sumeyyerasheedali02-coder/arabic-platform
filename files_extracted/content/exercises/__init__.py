@@ -16,24 +16,13 @@ from content.exercises.fill_blank_units_9_48 import FILL_BLANK
 from content.exercises.grammar_units_1_16 import GRAMMAR_EXERCISES
 from content.exercises.word_order_units_9_48 import WORD_ORDER
 
-# Texts stored with the exercises. The API derives each exercise's category
-# from them, so they are defined once here and never typed anywhere else.
-HINT_SYNONYM = "مترادف"
-HINT_ANTONYM = "ضد / متعاكس"
-HINT_PLURAL = "جمع الكلمة"
-HINT_COMPREHENSION = "استيعاب قرائي"
-HINT_WORD_ORDER = "رتب الكلمات"
-HINT_FILL_BLANK = "أكمل الفراغ"
-HINT_TRANSLATE_TO_TURKISH = "ترجم للتركية"
-# «رَتِّب الكلمات». Written with escapes on purpose: the shadda (U+0651) comes
-# before the kasra (U+0650). The reverse order looks identical on screen but is
-# a different string, and exact-text matching on it broke the word-order filter
-# for units 9–48 in the past.
-WORD_ORDER_PREFIX = "\u0631\u064e\u062a\u0651\u0650\u0628 الكلمات"
-
-# The two answers of a true/false exercise, exactly as the frontend sends them.
-ANSWER_TRUE = "صَحِيح"
-ANSWER_FALSE = "خَطَأ"
+# Fixed texts (hints, the word-order prefix, true/false answers) live in
+# content/labels.py and are re-exported here for the seeding tool.
+from content.labels import (  # noqa: E402
+    ANSWER_FALSE, ANSWER_TRUE, HINT_ANTONYM, HINT_COMPREHENSION, HINT_FILL_BLANK,
+    HINT_PLURAL, HINT_SYNONYM, HINT_TRANSLATE_TO_TURKISH, HINT_WORD_ORDER,
+    WORD_ORDER_PREFIX,
+)
 
 __all__ = [
     "ANSWER_FALSE", "ANSWER_TRUE", "ENRICHMENT", "EXERCISES_DATA", "FILL_BLANK",
