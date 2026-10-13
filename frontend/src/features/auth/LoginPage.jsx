@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import api from '../../api/client'
-import logo from '../../assets/logo.png'
+import BrandMark from '../../components/BrandMark'
 import { useAuth } from '../../auth/useAuth'
 import CardHeading from './CardHeading'
 import HeroPanel from './HeroPanel'
@@ -141,8 +141,7 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="aq-mobile-logo" style={{ textAlign: 'center', marginBottom: 32 }}>
-            <img src={logo} alt="Arabiq Akademi" width={60} height={60}
-              style={{ width: 60, height: 60, margin: '0 auto 12px', display: 'block' }} />
+            <BrandMark size={60} style={{ margin: '0 auto 12px', display: 'block' }} />
             <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--aq-navy)', fontFamily: "var(--aq-font-display)" }}>
               Arabiq Akademi
             </h1>

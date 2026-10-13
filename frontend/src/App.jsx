@@ -1,16 +1,20 @@
+import { lazy, Suspense } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/useAuth'
+import { CenteredSpinner } from './components/Spinner'
 import AppLayout from './layout/AppLayout'
-import LandingPage from './features/landing/LandingPage'
-import LoginPage from './features/auth/LoginPage'
-import LessonsPage from './features/lessons/LessonsPage'
-import LessonDetailPage from './features/lessons/LessonDetailPage'
-import ExercisesPage from './features/exercises/ExercisesPage'
-import FlashcardsPage from './features/srs/FlashcardsPage'
-import DashboardPage from './features/dashboard/DashboardPage'
-import TeacherPage from './features/teacher/TeacherPage'
-import ChatPage from './features/chat/ChatPage'
+
+// Each page is its own chunk, fetched the first time it is opened.
+const LandingPage      = lazy(() => import('./features/landing/LandingPage'))
+const LoginPage        = lazy(() => import('./features/auth/LoginPage'))
+const LessonsPage      = lazy(() => import('./features/lessons/LessonsPage'))
+const LessonDetailPage = lazy(() => import('./features/lessons/LessonDetailPage'))
+const ExercisesPage    = lazy(() => import('./features/exercises/ExercisesPage'))
+const FlashcardsPage   = lazy(() => import('./features/srs/FlashcardsPage'))
+const DashboardPage    = lazy(() => import('./features/dashboard/DashboardPage'))
+const TeacherPage      = lazy(() => import('./features/teacher/TeacherPage'))
+const ChatPage         = lazy(() => import('./features/chat/ChatPage'))
 
 // Students are sent to their own progress page; only the teacher reaches /teacher
 // (the backend enforces this too — this only avoids showing an empty page)
@@ -31,6 +35,7 @@ export default function App() {
   return (
     <HashRouter>
       <AuthProvider>
+        <Suspense fallback={<CenteredSpinner size={36} minHeight="100vh" background="var(--cream)" />}>
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
@@ -47,6 +52,7 @@ export default function App() {
           </Route>
           <Route path="*"                  element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </AuthProvider>
     </HashRouter>
   )

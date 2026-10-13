@@ -1,26 +1,5 @@
 import { Link } from 'react-router-dom'
-
-function Logo() {
-  return (
-    <svg width="140" height="140" viewBox="0 0 200 200" style={{ filter: 'drop-shadow(0 10px 40px rgba(201,168,76,0.45))' }}>
-      <defs>
-        <radialGradient id="goldGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#E8D48A" />
-          <stop offset="100%" stopColor="#C9A84C" />
-        </radialGradient>
-      </defs>
-      <circle cx="100" cy="100" r="78" fill="none" stroke="url(#goldGrad)" strokeWidth="1.5" strokeDasharray="3 4" opacity="0.85" />
-      <circle cx="100" cy="100" r="68" fill="none" stroke="#C9A84C" strokeWidth="0.6" opacity="0.4" />
-      {Array.from({ length: 12 }).map((_, i) => {
-        const a = (i * Math.PI * 2) / 12
-        const x = 100 + Math.cos(a) * 78
-        const y = 100 + Math.sin(a) * 78
-        return <circle key={i} cx={x} cy={y} r="2.2" fill="#E8D48A" />
-      })}
-      <text x="100" y="135" textAnchor="middle" fontFamily="'Amiri', serif" fontSize="110" fontWeight="700" fill="#0F2044">ع</text>
-    </svg>
-  )
-}
+import BrandMark from '../../components/BrandMark'
 
 export default function LandingPage() {
   const stats = [
@@ -47,7 +26,7 @@ export default function LandingPage() {
 
       <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', maxWidth: 1100 }}>
         <div style={{ animation: 'aqFloat 6s ease-in-out infinite' }}>
-          <Logo />
+          <BrandMark size={140} style={{ filter: 'drop-shadow(0 10px 40px rgba(201,168,76,0.45))' }} />
         </div>
 
         <div style={{

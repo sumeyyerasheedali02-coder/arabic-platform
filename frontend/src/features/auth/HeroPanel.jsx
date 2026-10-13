@@ -1,4 +1,4 @@
-import logo from '../../assets/logo.png'
+import BrandMark from '../../components/BrandMark'
 import { ArabesqueCorner, NeuralBackdrop } from './decorations'
 
 const STATS = [
@@ -19,8 +19,8 @@ export default function HeroPanel() {
 
       {/* Logo + Title */}
       <div style={{ position: 'relative', zIndex: 10, display: 'flex', alignItems: 'center', gap: 16 }}>
-        <img src={logo} alt="Arabiq Akademi" width={64} height={64}
-          style={{ width: 64, height: 64, filter: 'drop-shadow(0 4px 20px rgba(201,168,76,0.35))' }} />
+        <BrandMark size={64} letterColor="#C9A84C"
+          style={{ flexShrink: 0, filter: 'drop-shadow(0 4px 20px rgba(201,168,76,0.35))' }} />
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 600, color: '#FAF8F3', fontFamily: "var(--aq-font-display)", letterSpacing: '-0.01em' }}>
             Arabiq Akademi

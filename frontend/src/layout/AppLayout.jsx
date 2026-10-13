@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { CenteredSpinner } from '../components/Spinner'
 import { ProgressProvider } from '../features/progress/ProgressProvider'
 import { UnitsProvider } from '../features/units/UnitsProvider'
 import Header from './Header'
@@ -27,7 +28,10 @@ export default function AppLayout() {
           {menuOpen && <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} />}
           <Header onMenuClick={() => setMenuOpen(v => !v)} />
           <main className="app-main" style={{ background: 'var(--cream)', minHeight: 0 }}>
-            <Outlet />
+            {/* The shell stays on screen while the next page's code loads */}
+            <Suspense fallback={<CenteredSpinner size={32} height={260} />}>
+              <Outlet />
+            </Suspense>
           </main>
         </div>
       </ProgressProvider>
