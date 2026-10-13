@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 
 from ._app import models
-from srs import sm2
+from app.services.srs import sm2
 
 
 def _iso(days):

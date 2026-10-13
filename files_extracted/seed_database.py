@@ -23,8 +23,8 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from sqlalchemy import func, select, text, update
 from exercises_data import EXERCISES_DATA
-from database import (
-    init_db, AsyncSessionLocal,
+from app.database import init_db, AsyncSessionLocal
+from app.models import (
     Unit, Lesson, Vocabulary, Dialogue, DialogueLine, Exercise,
     SRSCard, Student, AISession,
 )

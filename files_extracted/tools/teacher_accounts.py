@@ -20,8 +20,12 @@ import sys
 
 from sqlalchemy import func, select
 
-from auth import TEACHER_EMAILS, hash_password, is_teacher_email
-from database import AsyncSessionLocal, Student, init_db
+from app.config import get_settings
+from app.database import AsyncSessionLocal, init_db
+from app.models import Student
+from app.security import hash_password, is_teacher_email
+
+TEACHER_EMAILS = get_settings().teacher_emails
 
 MIN_PASSWORD_LENGTH = 10
 

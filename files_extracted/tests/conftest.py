@@ -191,7 +191,7 @@ class FakeAI:
 @pytest.fixture
 def fake_ai(monkeypatch):
     fake = FakeAI()
-    monkeypatch.setattr(_app.main_module, "get_genai_client", lambda: fake)
+    monkeypatch.setattr(_app.ai_service, "get_client", lambda: fake)
     return fake
 
 

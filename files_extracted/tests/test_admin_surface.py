@@ -1,4 +1,6 @@
 """Destructive maintenance operations must not be reachable over HTTP."""
+import dataclasses
+
 import pytest
 from sqlalchemy import func, select
 
@@ -33,7 +35,7 @@ def test_replacing_content_from_the_command_line_needs_explicit_confirmation(see
 
 
 async def test_startup_never_seeds_a_database_that_has_content(seed_spy):
-    await main_module.startup()
+    await main_module.on_startup()
     assert seed_spy == []
 
 
@@ -43,10 +45,12 @@ async def test_startup_bootstraps_only_an_empty_database_and_can_be_disabled(see
         await db.execute(model.__table__.delete())
     await db.commit()
 
-    monkeypatch.setenv("SEED_ON_EMPTY_DB", "false")
-    await main_module.startup()
+    disabled = dataclasses.replace(main_module.settings, seed_on_empty_db=False)
+    monkeypatch.setattr(main_module, "settings", disabled)
+    await main_module.on_startup()
     assert seed_spy == []
 
-    monkeypatch.setenv("SEED_ON_EMPTY_DB", "true")
-    await main_module.startup()
+    enabled = dataclasses.replace(main_module.settings, seed_on_empty_db=True)
+    monkeypatch.setattr(main_module, "settings", enabled)
+    await main_module.on_startup()
     assert len(seed_spy) == 1 and seed_spy[0] == ((), {})
