@@ -198,14 +198,14 @@ def fake_ai(monkeypatch):
 @pytest.fixture
 def seed_spy(monkeypatch):
     """Replace the content seeder with a recorder: the real one wipes student activity."""
-    import seed_database
+    from tools import seed as seed_tool
 
     calls = []
 
     async def _fake_seed(*args, **kwargs):
         calls.append((args, kwargs))
 
-    monkeypatch.setattr(seed_database, "seed", _fake_seed)
+    monkeypatch.setattr(seed_tool, "seed", _fake_seed)
     return calls
 
 

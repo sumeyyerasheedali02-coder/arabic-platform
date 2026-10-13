@@ -5,6 +5,7 @@ FastAPI entry point: `uvicorn main:app`
 This module only assembles the application. Features live in `app/routers`,
 reusable logic in `app/services`, configuration in `app/config.py`.
 """
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -15,19 +16,21 @@ from app.database import init_db
 from app.routers import ALL_ROUTERS
 
 settings = get_settings()
+logger = logging.getLogger("arabiq")
 
 APP_VERSION = "1.0.0"
 
 
 async def on_startup() -> None:
     await init_db()
-    # First-run bootstrap only: fills a completely empty database with the book
+    # First-run bootstrap only: fills a completely empty database with the base
     # content. It never deletes or replaces anything; replacing content is a
-    # deliberate command-line operation (see seed_database.py).
+    # deliberate command-line operation (python -m tools.seed --help).
     if settings.seed_on_empty_db:
-        from seed_database import content_is_empty, seed
-        if await content_is_empty():
-            await seed()
+        from tools.seed import seed_if_empty
+
+        if await seed_if_empty(log=logger.info):
+            logger.info("Empty database: base content loaded.")
 
 
 @asynccontextmanager
