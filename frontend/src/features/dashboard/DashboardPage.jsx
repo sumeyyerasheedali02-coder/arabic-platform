@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../api/client'
+import { useApiData } from '../../api/useApiData'
 import { useAuth } from '../../auth/useAuth'
+import ErrorState from '../../components/ErrorState'
 import { CenteredSpinner } from '../../components/Spinner'
+import { completedLessons, useProgress } from '../progress/useProgress'
+import { useUnits } from '../units/useUnits'
 
 function StatCard({ icon, label, value, sub }) {
   return (
@@ -19,32 +22,17 @@ function StatCard({ icon, label, value, sub }) {
 }
 
 export default function DashboardPage() {
-  const { student, token }      = useAuth()
-  const [units, setUnits]       = useState([])
-  const [progress, setProgress] = useState([])
-  const [dueCards, setDueCards] = useState(0)
-  const [loading, setLoading]   = useState(true)
+  const { student, token } = useAuth()
+  const { units, selectUnit, loading: loadingUnits, error: unitsError, reload: reloadUnits } = useUnits()
+  const { progress, loading: loadingProgress } = useProgress()
+  const due = useApiData(token ? 'srs-due-count' : null, () => api.get('/me/srs/due').then(r => r.data.length))
 
-  useEffect(() => {
-    const reqs = [api.get('/units')]
-    if (token) {
-      reqs.push(api.get('/me/progress'))
-      reqs.push(api.get('/me/srs/due'))
-    }
-    Promise.all(reqs)
-      .then(([u, p, s]) => {
-        setUnits(u.data)
-        if (p) setProgress(p.data)
-        if (s) setDueCards(s.data.length)
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [token])
+  const dueCards    = due.data ?? 0
+  const lessonsDone = completedLessons(progress).length
+  const totalScore  = progress.reduce((sum, p) => sum + (p.score || 0), 0)
 
-  const completedLessons = progress.filter(p => p.status === 'completed').length
-  const totalScore       = progress.reduce((sum, p) => sum + (p.score || 0), 0)
-
-  if (loading) return <CenteredSpinner size={32} height={260} />
+  if (loadingUnits || loadingProgress || due.loading) return <CenteredSpinner size={32} height={260} />
+  if (unitsError && units.length === 0) return <ErrorState onRetry={reloadUnits} />
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 20px' }}>
@@ -74,7 +62,7 @@ export default function DashboardPage() {
       {/* Stats row */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
         <StatCard icon="📖" label="الوحدات المتاحة"  value={units.length} />
-        <StatCard icon="✅" label="الدروس المكتملة"   value={completedLessons} />
+        <StatCard icon="✅" label="الدروس المكتملة"   value={lessonsDone} />
         <StatCard icon="⭐" label="مجموع النقاط"      value={totalScore} />
         <StatCard icon="🗂️" label="بطاقات للمراجعة"  value={dueCards}
           sub={dueCards > 0 ? 'تحتاج مراجعة اليوم' : 'لا توجد بطاقات اليوم'} />
@@ -126,7 +114,7 @@ export default function DashboardPage() {
               <Link
                 key={unit.id}
                 to="/lessons"
-                state={{ unitId: unit.id }}
+                onClick={() => selectUnit(unit)}
                 style={{
                   background: '#fff', borderRadius: 14, padding: '18px 20px',
                   border: '1px solid var(--border)', textDecoration: 'none',

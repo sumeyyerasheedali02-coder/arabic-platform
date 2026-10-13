@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/client'
+import { useApiData } from '../../api/useApiData'
+import ErrorState from '../../components/ErrorState'
 import { CenteredSpinner } from '../../components/Spinner'
 import { DialogueBubbles, DialogueScript } from './DialogueViews'
 import GrammarRules from './GrammarRules'
@@ -13,6 +15,12 @@ const TABS = [
   { key: 'hiwar',   label: 'الحوار' },
   { key: 'vocab',   label: 'المفردات' },
 ]
+
+// The tab a lesson opens on
+const defaultTab = (lesson) => (
+  lesson.lesson_type === 'mufradat' ? 'vocab' : lesson.lesson_type === 'hiwar' ? 'hiwar' : 'lessons'
+)
+const hasDialogues = (lesson) => lesson.lesson_type === 'hiwar' || lesson.lesson_type === 'nahw'
 
 const SECTION_LABEL = { fontSize: 10, color: 'var(--muted)', letterSpacing: '.08em', fontWeight: 500 }
 const EMPTY_NOTE = { color: 'var(--muted)', textAlign: 'center', padding: '40px 0', fontSize: 13 }
@@ -100,7 +108,7 @@ function PanelTabs({ active, onChange }) {
 }
 
 /** "الدروس" tab: what is shown depends on the kind of lesson. */
-function LessonTab({ lesson, words, dialogues, loading }) {
+function LessonTab({ lesson, words, dialogues }) {
   const navigate = useNavigate()
   const type = lesson.lesson_type
   return (
@@ -115,12 +123,14 @@ function LessonTab({ lesson, words, dialogues, loading }) {
       )}
 
       {type === 'hiwar' && (
-        loading ? (
+        dialogues.loading ? (
           <CenteredSpinner size={24} padding={40} />
-        ) : dialogues.length === 0 ? (
+        ) : dialogues.error ? (
+          <ErrorState compact onRetry={dialogues.reload} />
+        ) : dialogues.list.length === 0 ? (
           <p style={EMPTY_NOTE}>لا يوجد نص لهذا الحوار بعد</p>
         ) : (
-          <DialogueScript dialogues={dialogues} />
+          <DialogueScript dialogues={dialogues.list} />
         )
       )}
 
@@ -156,15 +166,17 @@ function LessonTab({ lesson, words, dialogues, loading }) {
   )
 }
 
-function DialogueTab({ dialogues, loading }) {
+function DialogueTab({ dialogues }) {
   return (
     <div>
-      {loading ? (
+      {dialogues.loading ? (
         <CenteredSpinner size={24} padding={40} />
-      ) : dialogues.length === 0 ? (
+      ) : dialogues.error ? (
+        <ErrorState compact onRetry={dialogues.reload} />
+      ) : dialogues.list.length === 0 ? (
         <p style={EMPTY_NOTE}>لا يوجد حوار لهذا الدرس</p>
       ) : (
-        <DialogueBubbles dialogues={dialogues} />
+        <DialogueBubbles dialogues={dialogues.list} />
       )}
     </div>
   )
@@ -202,29 +214,18 @@ function VocabularyTab({ words }) {
   )
 }
 
-/** Slide-in window showing one lesson: full screen on mobile, side panel on desktop. */
+/**
+ * Slide-in window showing one lesson: full screen on mobile, side panel on desktop.
+ * Mount it with `key={lesson.id}` so each lesson starts on its own default tab.
+ */
 export default function LessonPanel({ lesson, unitVocab }) {
   const navigate = useNavigate()
-  const [tab, setTab]             = useState('text')
-  const [dialogues, setDialogues] = useState([])
-  const [loading, setLoading]     = useState(false)
-
-  useEffect(() => {
-    if (lesson.lesson_type === 'hiwar' || lesson.lesson_type === 'nahw') {
-      setLoading(true)
-      api.get(`/lessons/${lesson.id}/dialogues`)
-        .then(r => setDialogues(r.data))
-        .catch(() => setDialogues([]))
-        .finally(() => setLoading(false))
-    }
-  }, [lesson.id])
-
-  // Select best default tab per lesson type
-  useEffect(() => {
-    if (lesson.lesson_type === 'mufradat') setTab('vocab')
-    else if (lesson.lesson_type === 'hiwar') setTab('hiwar')
-    else setTab('lessons')
-  }, [lesson.id])
+  const [tab, setTab] = useState(() => defaultTab(lesson))
+  const query = useApiData(
+    hasDialogues(lesson) ? `dialogues:${lesson.id}` : null,
+    () => api.get(`/lessons/${lesson.id}/dialogues`).then(r => r.data),
+  )
+  const dialogues = { list: query.data ?? [], loading: query.loading, error: query.error, reload: query.reload }
 
   // Words of this lesson; a vocabulary lesson without its own words shows the whole unit
   const lessonVocab = unitVocab.filter(v => v.lesson_id === lesson.id)
@@ -250,8 +251,8 @@ export default function LessonPanel({ lesson, unitVocab }) {
         <PanelTabs active={tab} onChange={setTab} />
 
         <div className="lesson-panel-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: 20 }}>
-          {tab === 'lessons' && <LessonTab lesson={lesson} words={displayVocab} dialogues={dialogues} loading={loading} />}
-          {tab === 'hiwar'   && <DialogueTab dialogues={dialogues} loading={loading} />}
+          {tab === 'lessons' && <LessonTab lesson={lesson} words={displayVocab} dialogues={dialogues} />}
+          {tab === 'hiwar'   && <DialogueTab dialogues={dialogues} />}
           {tab === 'vocab'   && <VocabularyTab words={displayVocab} />}
         </div>
       </div>

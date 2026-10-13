@@ -1,31 +1,23 @@
-import { useState, useEffect } from 'react'
 import api from '../../api/client'
+import { useApiData } from '../../api/useApiData'
 import { CenteredSpinner } from '../../components/Spinner'
 
+const loadReport = () => Promise.all([
+  api.get('/teacher/students'),
+  api.get('/teacher/units/stats'),
+]).then(([students, units]) => ({ students: students.data, unitStats: units.data }))
+
 export default function TeacherPage() {
-  const [students, setStudents]   = useState([])
-  const [unitStats, setUnitStats] = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState(null)
+  const report = useApiData('teacher-report', loadReport)
+  const students  = report.data?.students ?? []
+  const unitStats = report.data?.unitStats ?? []
+  const status = report.error?.response?.status
+  const error = !report.error ? null
+    : status === 401 || status === 403
+      ? 'هذه الصفحة مخصصة للمعلمين فقط.'
+      : 'فشل تحميل البيانات. تأكد من تشغيل الخادم.'
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/teacher/students'),
-      api.get('/teacher/units/stats'),
-    ])
-      .then(([sRes, uRes]) => {
-        setStudents(sRes.data)
-        setUnitStats(uRes.data)
-      })
-      .catch(err => setError(
-        err.response?.status === 401 || err.response?.status === 403
-          ? 'هذه الصفحة مخصصة للمعلمين فقط.'
-          : 'فشل تحميل البيانات. تأكد من تشغيل الخادم.'
-      ))
-      .finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return <CenteredSpinner size={32} height={280} />
+  if (report.loading) return <CenteredSpinner size={32} height={280} />
 
   if (error) return (
     <div style={{ maxWidth: 480, margin: '80px auto', textAlign: 'center', padding: '0 20px' }}>

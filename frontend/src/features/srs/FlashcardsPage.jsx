@@ -1,8 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../api/client'
+import { useApiData } from '../../api/useApiData'
 import { useAuth } from '../../auth/useAuth'
+import ErrorState from '../../components/ErrorState'
 import { CenteredSpinner } from '../../components/Spinner'
+
+const NO_CARDS = []
+const newSession = (cards) => ({
+  cards, current: 0, flipped: false, done: false,
+  stats: { reviewed: 0, easy: 0, hard: 0 },
+})
 
 // 4 rating buttons mapped to SM-2 quality scores
 const RATINGS = [
@@ -13,28 +21,16 @@ const RATINGS = [
 ]
 
 export default function FlashcardsPage() {
-  const { token }                   = useAuth()
-  const [cards, setCards]           = useState([])
-  const [current, setCurrent]       = useState(0)
-  const [flipped, setFlipped]       = useState(false)
-  const [loading, setLoading]       = useState(true)
+  const { token } = useAuth()
+  const due = useApiData(token ? 'srs-due' : null, () => api.get('/me/srs/due').then(r => r.data))
+  const [session, setSession]       = useState(() => newSession(null))
   const [submitting, setSubmitting] = useState(false)
-  const [done, setDone]             = useState(false)
-  const [stats, setStats]           = useState({ reviewed: 0, easy: 0, hard: 0 })
 
-  useEffect(() => { if (token) fetchCards(); else setLoading(false) }, [token])
-
-  const fetchCards = () => {
-    setLoading(true)
-    api.get('/me/srs/due')
-      .then(r => {
-        setCards(r.data)
-        setCurrent(0); setFlipped(false); setDone(false)
-        setStats({ reviewed: 0, easy: 0, hard: 0 })
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }
+  // Each batch of due cards is one review session
+  const cards = due.data ?? NO_CARDS
+  if (session.cards !== cards) setSession(newSession(cards))
+  const { current, flipped, done, stats } = session.cards === cards ? session : newSession(cards)
+  const setFlipped = (update) => setSession(s => ({ ...s, flipped: typeof update === 'function' ? update(s.flipped) : update }))
 
   const handleReview = async (quality) => {
     if (submitting) return
@@ -42,13 +38,16 @@ export default function FlashcardsPage() {
     const card = cards[current]
     try {
       await api.post('/me/srs/review', { vocabulary_id: card.vocabulary_id, quality })
-      setStats(s => ({
-        reviewed: s.reviewed + 1,
-        easy:  s.easy  + (quality >= 4 ? 1 : 0),
-        hard:  s.hard  + (quality <= 2 ? 1 : 0),
-      }))
-      if (current + 1 >= cards.length) setDone(true)
-      else { setCurrent(c => c + 1); setFlipped(false) }
+      setSession(s => {
+        const stats = {
+          reviewed: s.stats.reviewed + 1,
+          easy:  s.stats.easy  + (quality >= 4 ? 1 : 0),
+          hard:  s.stats.hard  + (quality <= 2 ? 1 : 0),
+        }
+        return s.current + 1 >= cards.length
+          ? { ...s, stats, done: true }
+          : { ...s, stats, current: s.current + 1, flipped: false }
+      })
     } catch (e) { console.error(e) }
     finally { setSubmitting(false) }
   }
@@ -73,10 +72,11 @@ export default function FlashcardsPage() {
   )
 
   // ── Loading ──
-  if (loading) return <CenteredSpinner size={32} height={300} />
+  if (due.loading) return <CenteredSpinner size={32} height={300} />
+  if (due.error) return <ErrorState onRetry={due.reload} />
 
   // ── No cards ──
-  if (!loading && cards.length === 0) return (
+  if (cards.length === 0) return (
     <div style={{ maxWidth: 420, margin: '60px auto', padding: '0 16px', textAlign: 'center' }}>
       <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
       <h2 style={{ fontFamily: "'Amiri', serif", fontSize: 22, color: 'var(--navy)', marginBottom: 8 }}>
@@ -121,7 +121,7 @@ export default function FlashcardsPage() {
           ))}
         </div>
         <button
-          onClick={fetchCards}
+          onClick={due.reload}
           style={{
             background: 'var(--navy)', color: '#fff', border: 'none', cursor: 'pointer',
             borderRadius: 9, padding: '10px 28px', fontWeight: 500, fontSize: 13,

@@ -30,13 +30,16 @@ export default function App() {
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={localStorage.getItem('token') ? <Navigate to="/lessons" replace /> : <Navigate to="/landing" replace />} />
-          <Route path="/lessons"           element={<AppLayout><LessonsPage /></AppLayout>} />
-          <Route path="/lessons/:lessonId" element={<AppLayout><LessonDetailPage /></AppLayout>} />
-          <Route path="/exercises"         element={<AppLayout><ExercisesPage /></AppLayout>} />
-          <Route path="/srs"               element={<AppLayout><FlashcardsPage /></AppLayout>} />
-          <Route path="/dashboard"         element={<AppLayout><DashboardPage /></AppLayout>} />
-          <Route path="/teacher"           element={<TeacherOnly><AppLayout><TeacherPage /></AppLayout></TeacherOnly>} />
-          <Route path="/chat"              element={<AppLayout><ChatPage /></AppLayout>} />
+          {/* Pages inside the app shell. Guests may open all of them except /teacher. */}
+          <Route element={<AppLayout />}>
+            <Route path="/lessons"           element={<LessonsPage />} />
+            <Route path="/lessons/:lessonId" element={<LessonDetailPage />} />
+            <Route path="/exercises"         element={<ExercisesPage />} />
+            <Route path="/srs"               element={<FlashcardsPage />} />
+            <Route path="/dashboard"         element={<DashboardPage />} />
+            <Route path="/teacher"           element={<TeacherOnly><TeacherPage /></TeacherOnly>} />
+            <Route path="/chat"              element={<ChatPage />} />
+          </Route>
           <Route path="*"                  element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>

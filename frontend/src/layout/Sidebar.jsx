@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
-import api from '../api/client'
+import { completedLessons, useProgress } from '../features/progress/useProgress'
+import { useUnits } from '../features/units/useUnits'
 
 const AR_NUMS = ['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠']
 
@@ -16,21 +16,25 @@ function KBULogo() {
   )
 }
 
-export default function Sidebar({ selectedUnit, onSelectUnit, open }) {
-  const { student, logout, token } = useAuth()
-  const navigate = useNavigate()
-  const [units, setUnits]         = useState([])
-  const [progress, setProgress]   = useState([])
+// Pages that show the selected unit themselves; from anywhere else, choosing a
+// unit opens its lessons.
+const UNIT_PAGES = ['/lessons', '/exercises']
 
-  useEffect(() => {
-    api.get('/units').then(r => setUnits(r.data)).catch(console.error)
-    if (token) {
-      api.get('/me/progress').then(r => setProgress(r.data)).catch(console.error)
-    }
-  }, [token])
+export default function Sidebar({ open, onNavigate }) {
+  const { student, logout } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { units, selectedUnit, selectUnit } = useUnits()
+  const { progress } = useProgress()
+
+  const openUnit = (unit) => {
+    selectUnit(unit)
+    if (!UNIT_PAGES.includes(location.pathname)) navigate('/lessons')
+    onNavigate?.()
+  }
 
   const totalLessons    = units.reduce((s, u) => s + (u.total_lessons || 0), 0)
-  const doneLessons     = progress.filter(p => p.status === 'completed').length
+  const doneLessons     = completedLessons(progress).length
   const progressPct     = totalLessons > 0 ? Math.round((doneLessons / totalLessons) * 100) : 0
 
   return (
@@ -80,7 +84,7 @@ export default function Sidebar({ selectedUnit, onSelectUnit, open }) {
           return (
             <div
               key={unit.id}
-              onClick={() => onSelectUnit(unit)}
+              onClick={() => openUnit(unit)}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: 10,
                 padding: '9px 16px', cursor: 'pointer',
