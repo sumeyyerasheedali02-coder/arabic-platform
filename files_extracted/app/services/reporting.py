@@ -4,7 +4,7 @@ from typing import List
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ExerciseAnswer, Student, StudentProgress, Unit
+from app.models import ExerciseAnswer, Lesson, Student, StudentProgress, Unit
 from app.schemas import StudentSummary, UnitStats
 
 
@@ -45,6 +45,19 @@ async def student_summaries(db: AsyncSession) -> List[StudentSummary]:
     return summaries
 
 
+def completion_percent(completed_lessons: int, students: int, lessons_in_unit: int) -> float:
+    """Share of the unit that the students have completed, 0–100.
+
+    Every student can complete every lesson of the unit once, so the whole is
+    students x lessons. (Dividing by the number of students alone gave up to
+    300% for a unit of three lessons.)
+    """
+    possible = students * lessons_in_unit
+    if possible <= 0:
+        return 0.0
+    return round(min(completed_lessons / possible, 1.0) * 100, 1)
+
+
 async def unit_stats(db: AsyncSession) -> List[UnitStats]:
     units_result = await db.execute(select(Unit).order_by(Unit.unit_number))
     units = units_result.scalars().all()
@@ -72,11 +85,16 @@ async def unit_stats(db: AsyncSession) -> List[UnitStats]:
         )
         completed = completed_result.scalar() or 0
 
+        lessons_result = await db.execute(
+            select(func.count(Lesson.id)).where(Lesson.unit_id == unit.id)
+        )
+        lessons_in_unit = lessons_result.scalar() or unit.total_lessons or 0
+
         stats.append(UnitStats(
             unit_number=unit.unit_number,
             title_ar=unit.title_ar,
             avg_score=round(avg_score, 1),
-            completion_pct=round((completed / total) * 100, 1),
+            completion_pct=completion_percent(completed, total, lessons_in_unit),
         ))
 
     return stats
