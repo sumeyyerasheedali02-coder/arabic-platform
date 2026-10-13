@@ -9,6 +9,7 @@ import { useUnits } from '../units/useUnits'
 import ExerciseCard from './ExerciseCard'
 import SessionSummary from './SessionSummary'
 import { FILTER_OPTIONS, matchesFilter } from './filters'
+import { correctCount, scoresByLesson, successRate, totalPoints } from './session'
 
 const NO_EXERCISES = []
 const newSession = (key) => ({ key, current: 0, results: [], done: false })
@@ -42,16 +43,17 @@ export default function ExercisesPage() {
 
   const finishSession = async () => {
     setSession(s => ({ ...s, done: true }))
-    if (!isGuest) {
-      const totalScore = results.reduce((s, r) => s + (r?.points_earned || 0), 0)
-      const firstEx    = exercises[0]
-      if (firstEx?.lesson_id && selectedUnit) {
-        try {
-          await api.post(`/me/progress/update?unit_id=${selectedUnit.id}&lesson_id=${firstEx.lesson_id}&score=${totalScore}&status=completed`)
-          reloadProgress()
-        } catch { /* non-critical */ }
-      }
-    }
+    if (isGuest) return
+    // One progress row per lesson the session touched, each with the points
+    // earned on that lesson's exercises.
+    try {
+      await Promise.all(scoresByLesson(exercises, results).map(({ lessonId, score }) => (
+        api.post('/me/progress/update', null, {
+          params: { unit_id: unitId, lesson_id: lessonId, score, status: 'completed' },
+        })
+      )))
+    } catch { /* the answers themselves are already saved; only the summary row is missing */ }
+    reloadProgress()
   }
 
   const next = () => {
@@ -64,22 +66,14 @@ export default function ExercisesPage() {
   if (loadingUnits) return <CenteredSpinner size={32} height={260} />
   if (unitsError && units.length === 0) return <ErrorState onRetry={reloadUnits} />
 
-  const answered     = results.length > current
-  const totalPoints  = results.reduce((s, r) => s + (r?.points_earned || 0), 0)
-  const correctCount = results.filter(r => r?.is_correct).length
-  // Success rate = points of the correctly answered exercises / points of all
-  // answered ones. Guests are awarded no points, so it cannot be based on
-  // points_earned (that showed 0% for a guest who answered everything right).
-  const answeredExercises = exercises.slice(0, results.length)
-  const maxPoints    = answeredExercises.reduce((s, e) => s + (e.points || 10), 0)
-  const rightPoints  = answeredExercises.reduce((s, e, i) => s + (results[i]?.is_correct ? (e.points || 10) : 0), 0)
+  const answered = results.length > current
 
   if (done) {
-    const pct = maxPoints > 0 ? Math.round((rightPoints / maxPoints) * 100) : 0
     return (
       <SessionSummary
-        total={exercises.length} correctCount={correctCount} pct={pct}
-        totalPoints={totalPoints} isGuest={isGuest} onRestart={restart}
+        total={exercises.length} correctCount={correctCount(results)}
+        pct={successRate(exercises, results)} totalPoints={totalPoints(results)}
+        isGuest={isGuest} onRestart={restart}
       />
     )
   }

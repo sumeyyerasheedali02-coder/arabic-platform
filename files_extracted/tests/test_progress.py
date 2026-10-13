@@ -1,6 +1,3 @@
-import pytest
-
-
 def _update(client, headers, **params):
     return client.post("/api/me/progress/update", headers=headers, params=params)
 
@@ -32,14 +29,12 @@ async def test_repeat_update_keeps_best_score_and_counts_attempts(client, regist
     assert (row["score"], row["attempts"], row["time_spent_sec"]) == (15, 2, 50)
 
 
-@pytest.mark.xfail(reason="progress is accepted for a lesson that does not exist")
 async def test_progress_for_unknown_lesson_is_404(client, register, content):
     student = await register()
     res = await _update(client, student.headers, unit_id=content.unit_a, lesson_id=99999)
     assert res.status_code == 404
 
 
-@pytest.mark.xfail(reason="unit_id is stored as sent even when the lesson belongs to another unit")
 async def test_progress_is_filed_under_the_lessons_own_unit(client, register, content):
     student = await register()
     await _update(client, student.headers, unit_id=content.unit_b, lesson_id=content.a_muf)
@@ -47,7 +42,6 @@ async def test_progress_is_filed_under_the_lessons_own_unit(client, register, co
     assert row["unit_id"] == content.unit_a
 
 
-@pytest.mark.xfail(reason="any status string and any score are stored without validation")
 async def test_progress_rejects_unknown_status_and_caps_score(client, register, content):
     student = await register()
     bad = await _update(client, student.headers, unit_id=content.unit_a,
@@ -58,3 +52,24 @@ async def test_progress_rejects_unknown_status_and_caps_score(client, register, 
                   lesson_id=content.a_muf, score=99999, status="completed")
     row = (await client.get("/api/me/progress", headers=student.headers)).json()[0]
     assert row["score"] == 15
+
+
+async def test_progress_rejects_negative_numbers(client, register, content):
+    student = await register()
+    for field in ("score", "time_spent_sec"):
+        res = await _update(client, student.headers, unit_id=content.unit_a,
+                            lesson_id=content.a_muf, **{field: -5})
+        assert res.status_code == 422
+
+
+async def test_a_session_over_several_lessons_is_recorded_per_lesson(client, register, content):
+    """What the exercises page sends after a mixed session: one row per lesson."""
+    student = await register()
+    for lesson, score in ((content.a_muf, 15), (content.a_hiwar, 10), (content.a_nahw, 15)):
+        await _update(client, student.headers, unit_id=content.unit_a, lesson_id=lesson,
+                      score=score, status="completed")
+    rows = {row["lesson_id"]: row for row in
+            (await client.get("/api/me/progress", headers=student.headers)).json()}
+    assert {lesson: row["score"] for lesson, row in rows.items()} == {
+        content.a_muf: 15, content.a_hiwar: 10, content.a_nahw: 15}
+    assert all(row["status"] == "completed" and row["unit_id"] == content.unit_a for row in rows.values())
