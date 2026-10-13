@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import api from '../../api/client'
-import { useApiData } from '../../api/useApiData'
+import { useStaffApiData } from '../staff/useStaffApiData'
 import { useAuth } from '../../auth/useAuth'
 import { CenteredSpinner } from '../../components/Spinner'
 import { useStaff } from '../staff/useStaff'
@@ -13,7 +13,7 @@ export default function AdminTeachersPage() {
   const sections = useStaff()
   const [editing, setEditing] = useState(null)
   const [notice, setNotice] = useState('')
-  const data = useApiData(`admin-teachers:${student.id}`,
+  const data = useStaffApiData(`admin-teachers:${student.id}`,
     () => api.get('/admin/teachers').then(r => r.data))
   function saved(message) {
     setEditing(null); setNotice(message); data.reload(); sections.reload()
@@ -30,7 +30,7 @@ export default function AdminTeachersPage() {
         <section className="staff-panel">
           <div className="staff-toolbar"><h2>حسابات المدرسين</h2>
             <button className="staff-primary" onClick={() => { setEditing({}); setNotice('') }}>إضافة أستاذ</button>
-            <button onClick={data.reload}>تحديث</button>
+
           </div>
           <div className="staff-table-wrap"><table className="staff-table">
             <thead><tr>{['الأستاذ','الشُّعَب','الحالة',''].map((h,i) => <th key={i}>{h}</th>)}</tr></thead>

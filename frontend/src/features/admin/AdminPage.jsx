@@ -1,21 +1,20 @@
 import { Link } from 'react-router-dom'
 import api from '../../api/client'
-import { useApiData } from '../../api/useApiData'
+import { useStaffApiData } from '../staff/useStaffApiData'
 import { useAuth } from '../../auth/useAuth'
 import { CenteredSpinner } from '../../components/Spinner'
 import { useStaff } from '../staff/useStaff'
 import { StaffMessage, StaffStats } from '../teacher/StaffUi'
 import { apiError } from '../teacher/staffFormat'
-import RecentActivity from '../teacher/RecentActivity'
 import SectionCards from './SectionCards'
 
 export default function AdminPage() {
   const { student } = useAuth()
   const sections = useStaff()
-  const report = useApiData(`admin-overview:${student.id}`, () => Promise.all([
-    api.get('/admin/teachers'), api.get('/teacher/students'), api.get('/teacher/activity'),
-  ]).then(([teachers, students, activity]) => ({
-    teachers: teachers.data, students: students.data, activity: activity.data,
+  const report = useStaffApiData(`admin-overview:${student.id}`, () => Promise.all([
+    api.get('/admin/teachers'), api.get('/teacher/students'),
+  ]).then(([teachers, students]) => ({
+    teachers: teachers.data, students: students.data,
   })))
   function refresh() { sections.reload(); report.reload() }
   if (sections.loading || report.loading) return <CenteredSpinner size={32} height={260} />
@@ -29,7 +28,7 @@ export default function AdminPage() {
   const average = students.length
     ? Math.round(students.reduce((n,s) => n + s.completion_pct, 0) / students.length) + '%' : '—'
   return <div className="staff-page" dir="rtl">
-    <div className="staff-toolbar"><h1>نظرة عامة على المنصة</h1><button onClick={refresh}>تحديث</button></div>
+    <div className="staff-toolbar"><h1>نظرة عامة على المنصة</h1></div>
     <p className="staff-intro">مرحبًا {student.name}. إليك توزيع الحسابات وتقدّم الطلاب وما يحتاج متابعة.</p>
     <StaffStats items={[
       ['عدد الطلاب', students.length], ['المدرسون النشطون', teachers.filter(t => t.is_active).length],
@@ -51,6 +50,5 @@ export default function AdminPage() {
       <Link className="staff-button" to="/admin/sections">تفاصيل الشُّعَب</Link></div>
       <SectionCards sections={sections.data ?? []} teachers={teachers} />
     </section>
-    <RecentActivity items={report.data?.activity ?? []} />
   </div>
 }

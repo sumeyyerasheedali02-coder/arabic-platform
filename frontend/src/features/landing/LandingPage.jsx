@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import BrandMark from '../../components/BrandMark'
+import './landing.css'
 
 export default function LandingPage() {
   const stats = [
@@ -11,7 +12,7 @@ export default function LandingPage() {
   ]
 
   return (
-    <main dir="rtl" style={{
+    <main className="landing-page" dir="rtl" style={{
       minHeight: '100vh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       background: 'linear-gradient(135deg, #0B1426 0%, #0F2044 50%, #162952 100%)',
@@ -24,12 +25,12 @@ export default function LandingPage() {
         pointerEvents: 'none',
       }} />
 
-      <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', maxWidth: 1100 }}>
-        <div style={{ animation: 'aqFloat 6s ease-in-out infinite' }}>
+      <div className="landing-content" style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', maxWidth: 1100 }}>
+        <div className="landing-brand" style={{ animation: 'aqFloat 6s ease-in-out infinite' }}>
           <BrandMark size={140} style={{ filter: 'drop-shadow(0 10px 40px rgba(201,168,76,0.45))' }} />
         </div>
 
-        <div style={{
+        <div className="landing-badge" style={{
           marginTop: 32, display: 'inline-flex', alignItems: 'center', gap: 8,
           border: '1px solid rgba(201,168,76,0.4)', background: 'rgba(201,168,76,0.08)',
           color: '#E8D48A', padding: '8px 20px', borderRadius: 9999,
@@ -74,7 +75,7 @@ export default function LandingPage() {
           <span aria-hidden style={{ fontSize: 18 }}>←</span>
         </Link>
 
-        <div style={{
+        <div className="landing-stats" style={{
           marginTop: 64, display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
           gap: 28, width: '100%', maxWidth: 880, paddingTop: 32,

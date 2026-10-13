@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
-import { useApiData } from '../../api/useApiData'
+import { useStaffApiData } from '../staff/useStaffApiData'
 import { useAuth } from '../../auth/useAuth'
 import { CenteredSpinner } from '../../components/Spinner'
 import { StaffMessage } from '../teacher/StaffUi'
@@ -25,7 +25,7 @@ export default function AdminAuditPage() {
   const action = params.get('action') || ''
   const rawOffset = Number(params.get('offset'))
   const offset = Number.isInteger(rawOffset) && rawOffset >= 0 ? rawOffset : 0
-  const log = useApiData(`audit:${student.id}:${action}:${offset}`,
+  const log = useStaffApiData(`audit:${student.id}:${action}:${offset}`,
     () => api.get('/admin/audit', { params: { offset, limit: 25, ...(action ? { action } : {}) } }).then(r => r.data))
   function change(nextOffset, nextAction = action) {
     setParams({ ...(nextOffset ? { offset: String(nextOffset) } : {}), ...(nextAction ? { action: nextAction } : {}) })
@@ -39,7 +39,7 @@ export default function AdminAuditPage() {
         <option value="">جميع العمليات</option>
         {Object.entries(ACTIONS).map(([key,label]) => <option key={key} value={key}>{label}</option>)}
       </select>
-      <button onClick={log.reload}>تحديث</button>
+
     </div>
     {log.loading ? <CenteredSpinner size={30} height={240} />
       : log.error ? <StaffMessage error={apiError(log.error)} onRetry={log.reload} />

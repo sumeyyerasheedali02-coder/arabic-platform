@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
-import { useApiData } from '../../api/useApiData'
+import { useStaffApiData } from '../staff/useStaffApiData'
 import { useAuth } from '../../auth/useAuth'
 import { CenteredSpinner } from '../../components/Spinner'
 import { useStaff } from '../staff/useStaff'
@@ -20,14 +20,14 @@ export default function TeacherPage({ view = 'overview' }) {
   const sections = useStaff()
   const selected = params.get('section') || (sections.data?.length === 1 ? sections.data[0].class_section : '')
   const filter = params.get('filter') || 'all'
-  const report = useApiData(sections.data ? `staff-report:${student.id}:${selected}:${view}` : null, () => {
+  const report = useStaffApiData(sections.data ? `staff-report:${student.id}:${selected}:${view}` : null, () => {
     const query = selected ? { section: selected } : {}
     return Promise.all([
       api.get('/teacher/students', { params: query }),
       view === 'overview' ? api.get('/teacher/units/stats', { params: query }) : Promise.resolve({ data: [] }),
     ]).then(([students, units]) => ({ students: students.data, units: units.data }))
   })
-  const activity = useApiData(view === 'overview' && sections.data
+  const activity = useStaffApiData(view === 'overview' && sections.data
     ? `staff-activity:${student.id}:${selected}` : null,
     () => api.get('/teacher/activity', { params: selected ? { section: selected } : {} }).then(r => r.data))
   function changeParam(key, value) {
@@ -65,7 +65,7 @@ export default function TeacherPage({ view = 'overview' }) {
               الشعبة {s.class_section} · {s.students_count} طالبًا
             </option>)}
           </select>
-          <button onClick={refresh}>تحديث</button>
+
         </div>
         <StaffStats items={[
           ['عدد الطلاب', students.length],

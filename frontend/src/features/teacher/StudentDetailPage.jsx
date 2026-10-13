@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import api from '../../api/client'
-import { useApiData } from '../../api/useApiData'
+import { useStaffApiData } from '../staff/useStaffApiData'
 import { useAuth } from '../../auth/useAuth'
 import { CenteredSpinner } from '../../components/Spinner'
 import { CompletionBar, StaffMessage, StaffStats } from './StaffUi'
@@ -47,7 +47,7 @@ export default function StudentDetailPage() {
   const { student: account } = useAuth()
   const sections = useStaff()
   const location = useLocation()
-  const report = useApiData(`student-detail:${account.id}:${studentId}`,
+  const report = useStaffApiData(`student-detail:${account.id}:${studentId}`,
     () => api.get(`/teacher/students/${studentId}`).then(r => r.data))
   const [onlyStarted, setOnlyStarted] = useState(false)
   const studentsPath = location.state?.backTo || (account.is_admin ? '/admin/students' : '/teacher/students')
@@ -63,7 +63,7 @@ export default function StudentDetailPage() {
     <div className="staff-toolbar">
       <Link className="staff-button" to={studentsPath}>العودة لقائمة الطلاب</Link>
       {account.is_admin && <Link className="staff-button" to="/admin">إدارة المنصة</Link>}
-      <button onClick={report.reload}>تحديث</button>
+
     </div>
     <h1>{student.name}</h1>
     <p className="staff-intro">{student.email} · رقم الطالب: {student.student_number || 'لم يُدخل بعد'} · {student.class_section

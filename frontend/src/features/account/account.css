@@ -1,0 +1,18 @@
+.account-page { max-width: 680px; padding: 24px 20px; margin: auto; font-family: 'Cairo', sans-serif; }
+.account-page h1, .account-recovery h1 { color: var(--navy); font-size: 24px; margin-bottom: 18px; }
+.account-panel { padding: 24px; margin-bottom: 20px; background: white; border: 1px solid var(--border); border-radius: 18px; }
+.account-panel h2 { font-size: 18px; color: var(--navy); margin-bottom: 16px; }
+.account-panel form { display: flex; flex-direction: column; gap: 10px; }
+.account-panel input { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 9px; font: inherit; }
+.account-panel input:read-only { background: var(--cream); color: var(--muted); }
+.account-panel button { padding: 12px 20px; border: 0; border-radius: 9px; color: white; background: var(--navy); font: inherit; cursor: pointer; margin-top: 8px; }
+.account-panel button:disabled { opacity: .55; cursor: default; }
+.account-panel input:focus-visible, .account-panel button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.account-hint { font-size: 12px; color: var(--muted); line-height: 1.8; }
+.account-success { color: #166534; background: #f0fdf4; padding: 12px; margin-bottom: 16px; border-radius: 9px; }
+.account-error { color: #b91c1c; }
+.account-recovery { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; font-family: 'Cairo', sans-serif; }
+.account-recovery .account-panel { width: 100%; max-width: 480px; margin: 0; }
+.account-recovery .account-panel > svg { display: block; margin: 0 auto 16px; }
+.account-recovery a { display: block; margin-top: 20px; color: var(--navy); }
+@media (max-width: 480px) { .account-panel { padding: 18px; } .account-page { padding: 18px 12px; } }

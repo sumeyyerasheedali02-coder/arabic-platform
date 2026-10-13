@@ -78,14 +78,15 @@ export default function Header({ onMenuClick }) {
               <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>{student.is_admin ? 'مدير المنصة'
                 : student.is_teacher ? 'أستاذ' : 'İlahiyat Fakültesi'}</div>
             </div>
-            <div style={{
+            <Link to="/account" aria-label="إعدادات الحساب" title="إعدادات الحساب" style={{
               width: 34, height: 34, borderRadius: '50%',
+              textDecoration: 'none',
               background: 'var(--gold)', color: 'var(--navy)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 11, fontWeight: 600, flexShrink: 0,
             }}>
               {student.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
-            </div>
+            </Link>
           </>
         ) : (
           <>

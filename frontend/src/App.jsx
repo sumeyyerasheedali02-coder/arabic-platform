@@ -22,6 +22,8 @@ const AdminSectionsPage = lazy(() => import('./features/admin/AdminSectionsPage'
 const AdminAuditPage = lazy(() => import('./features/admin/AdminAuditPage'))
 const ContentLibraryPage = lazy(() => import('./features/staff/ContentLibraryPage'))
 const ChatPage         = lazy(() => import('./features/chat/ChatPage'))
+const AccountPage = lazy(() => import('./features/account/AccountPage'))
+const PasswordRecoveryPage = lazy(() => import('./features/account/PasswordRecoveryPage'))
 
 // Admins use their own area; legacy teacher links keep working after the split.
 function TeacherOnly({ children }) {
@@ -80,11 +82,14 @@ export default function App() {
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<PasswordRecoveryPage />} />
+          <Route path="/reset-password" element={<PasswordRecoveryPage reset />} />
           <Route path="/choose-section" element={<ClassSectionPage />} />
           <Route path="/complete-profile" element={<ClassSectionPage />} />
           <Route path="/" element={<Home />} />
           {/* Shared shell; role guards keep staff pages separate from student pages. */}
           <Route element={<AppLayout />}>
+            <Route path="/account" element={<AccountPage />} />
             <Route path="/lessons"           element={<LearningRoute><LessonsPage /></LearningRoute>} />
             <Route path="/lessons/:lessonId" element={<LearningRoute><LessonDetailPage /></LearningRoute>} />
             <Route path="/exercises"         element={<LearningRoute exercises><ExercisesPage /></LearningRoute>} />

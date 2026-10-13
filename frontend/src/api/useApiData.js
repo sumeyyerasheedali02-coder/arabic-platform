@@ -14,7 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * An answer that arrives after `key` has changed is ignored, so a slow request
  * can never overwrite what the user moved on to.
  */
-export function useApiData(key, load) {
+export function useApiData(key, load, { refreshOnFocus = false } = {}) {
   const [result, setResult] = useState({ key: null, request: null, data: null, error: null })
   const [attempt, setAttempt] = useState(0)
   const request = key == null ? null : `${key}|${attempt}`
@@ -35,6 +35,22 @@ export function useApiData(key, load) {
   }, [key, request])
 
   const reload = useCallback(() => setAttempt((n) => n + 1), [])
+
+  useEffect(() => {
+    if (!refreshOnFocus || key == null) return undefined
+    let lastRefresh = Date.now()
+    function refresh() {
+      if (document.visibilityState !== 'visible' || Date.now() - lastRefresh < 1000) return
+      lastRefresh = Date.now()
+      reload()
+    }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [key, refreshOnFocus, reload])
 
   const sameKey = key != null && result.key === key
   const settled = request != null && result.request === request
