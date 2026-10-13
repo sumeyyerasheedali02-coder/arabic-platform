@@ -1,5 +1,7 @@
 """ORM models. Table and column names are part of the deployed database schema."""
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, func,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -155,6 +157,8 @@ class Student(Base):
 # ─────────────────────────────────────────
 class StudentProgress(Base):
     __tablename__ = "student_progress"
+    # Also created on existing databases by migration 0001 (app/migrations.py)
+    __table_args__ = (Index("ix_student_progress_student_lesson", "student_id", "lesson_id"),)
     id              = Column(Integer, primary_key=True, index=True)
     student_id      = Column(Integer, ForeignKey("students.id",  ondelete="CASCADE"))
     unit_id         = Column(Integer, ForeignKey("units.id"))
@@ -191,6 +195,8 @@ class ExerciseAnswer(Base):
 # ─────────────────────────────────────────
 class SRSCard(Base):
     __tablename__ = "srs_cards"
+    # Also created on existing databases by migration 0001 (app/migrations.py)
+    __table_args__ = (Index("ix_srs_cards_student_vocabulary", "student_id", "vocabulary_id"),)
     id              = Column(Integer, primary_key=True, index=True)
     student_id      = Column(Integer, ForeignKey("students.id",    ondelete="CASCADE"))
     vocabulary_id   = Column(Integer, ForeignKey("vocabulary.id",  ondelete="CASCADE"))

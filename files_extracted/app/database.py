@@ -18,12 +18,18 @@ async def get_db():
         yield session
 
 
-async def init_db() -> None:
-    """Create tables that do not exist yet. Existing tables are never altered."""
+async def init_db() -> list[str]:
+    """Bring the database to the current schema; returns the migrations applied.
+
+    Missing tables are created, then pending migrations (changes to tables
+    that already existed) are applied. Nothing is ever dropped.
+    """
     from app import models  # noqa: F401  (registers the tables on Base.metadata)
+    from app.migrations import apply_migrations
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        return await apply_migrations(conn)
 
 
 __all__ = ["AsyncSession", "AsyncSessionLocal", "Base", "engine", "get_db", "init_db"]

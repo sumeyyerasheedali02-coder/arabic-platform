@@ -14,7 +14,9 @@ _counter = itertools.count(1)
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def _schema():
-    assert "arabiq-test-" in str(engine.url), "tests must run on the throw-away database"
+    database = str(engine.url.database or "")
+    on_throwaway_database = "arabiq-test-" in database or _app.TEST_DATABASE_MARKER in database
+    assert on_throwaway_database, "tests must run on a throw-away database"
     await _app.init_db()
     yield
     await engine.dispose()
