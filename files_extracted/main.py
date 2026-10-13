@@ -86,16 +86,35 @@ async def root():
 # ═══════════════════════════════════════════
 #  المصادقة (Auth)
 # ═══════════════════════════════════════════
+async def find_student_by_email(db: AsyncSession, email: str) -> Optional[Student]:
+    """Addresses are compared without regard to letter case."""
+    result = await db.execute(
+        select(Student)
+        .where(func.lower(Student.email) == email.strip().lower())
+        .order_by(Student.id)
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 @app.post("/api/auth/register", response_model=Token)
 async def register(data: StudentRegister, db: AsyncSession = Depends(get_db)):
-    # التحقق من عدم وجود الإيميل مسبقاً
-    result = await db.execute(select(Student).where(Student.email == data.email))
-    if result.scalar_one_or_none():
+    email = data.email.strip().lower()
+
+    # حساب الأستاذ لا يُنشأ من التسجيل العام: لا يوجد تحقق من ملكية البريد،
+    # ومن يسجّل بريد الأستاذ أولاً كان سيحصل على صلاحياته.
+    if is_teacher_email(email):
+        raise HTTPException(
+            status_code=403,
+            detail="هذا البريد مخصّص لحساب الأستاذ، ويُنشأ حسابه من قِبل إدارة المنصة",
+        )
+
+    if await find_student_by_email(db, email):
         raise HTTPException(status_code=400, detail="البريد الإلكتروني مسجل مسبقاً")
 
     student = Student(
         name=data.name,
-        email=data.email,
+        email=email,
         password_hash=hash_password(data.password),
         year=data.year,
     )
@@ -110,18 +129,13 @@ async def register(data: StudentRegister, db: AsyncSession = Depends(get_db)):
 
 @app.get("/api/auth/check-email", response_model=EmailCheckResponse)
 async def check_email(email: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Student).where(Student.email == email))
-    student = result.scalar_one_or_none()
-    if student:
-        # لا نُعيد الاسم حتى لا يُكشف اسم صاحب أي بريد لمن يعرف بريده
-        return EmailCheckResponse(exists=True)
-    return EmailCheckResponse(exists=False)
+    # لا نُعيد الاسم حتى لا يُكشف اسم صاحب أي بريد لمن يعرف بريده
+    return EmailCheckResponse(exists=await find_student_by_email(db, email) is not None)
 
 
 @app.post("/api/auth/login", response_model=Token)
 async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Student).where(Student.email == form.username))
-    student = result.scalar_one_or_none()
+    student = await find_student_by_email(db, form.username)
 
     if not student or not verify_password(form.password, student.password_hash):
         raise HTTPException(status_code=401, detail="بيانات تسجيل الدخول غير صحيحة")

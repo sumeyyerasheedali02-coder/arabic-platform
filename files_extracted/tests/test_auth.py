@@ -79,14 +79,12 @@ async def test_token_of_deleted_account_is_rejected(client, register, db):
     assert (await client.get("/api/me/progress", headers=student.headers)).status_code == 401
 
 
-@pytest.mark.xfail(reason="anyone registering an allowlisted teacher email becomes a teacher")
 async def test_public_registration_cannot_claim_teacher_email(client):
     res = await client.post("/api/auth/register", json={
         "name": "Impostor", "email": TEACHER_EMAIL, "password": "secret123"})
     assert res.status_code == 403
 
 
-@pytest.mark.xfail(reason="a case variant of the teacher email is a new account with teacher rights")
 async def test_case_variant_of_teacher_email_gains_nothing(client, teacher):
     await teacher()
     variant = TEACHER_EMAIL.replace("teacher", "Teacher")
@@ -95,10 +93,34 @@ async def test_case_variant_of_teacher_email_gains_nothing(client, teacher):
     assert res.status_code in (400, 403)
 
 
-@pytest.mark.xfail(reason="email lookups are case-sensitive, so the same address can register twice")
 async def test_email_is_unique_regardless_of_case(client, register):
     student = await register(email="Mixed.Case@example.com")
     res = await client.post("/api/auth/register", json={
         "name": "Dup", "email": "mixed.case@example.com", "password": "secret123"})
     assert res.status_code == 400
     assert student.id
+
+
+async def test_login_and_email_check_ignore_letter_case(client, register, login):
+    student = await register(email="Fatma.Kaya@example.com")
+    res = await login("FATMA.KAYA@example.com", student.password)
+    assert res.status_code == 200 and res.json()["student_id"] == student.id
+    check = await client.get("/api/auth/check-email", params={"email": "fatma.kaya@EXAMPLE.com"})
+    assert check.json()["exists"] is True
+
+
+async def test_teacher_account_is_provisioned_from_the_command_line(login):
+    from tools import teacher_accounts
+
+    assert await teacher_accounts.create_account(TEACHER_EMAIL.upper(), "Hoca", "long-teacher-pass") == 0
+    res = await login(TEACHER_EMAIL, "long-teacher-pass")
+    assert res.status_code == 200 and res.json()["is_teacher"] is True
+
+    with pytest.raises(SystemExit):   # already exists
+        await teacher_accounts.create_account(TEACHER_EMAIL, "Hoca", "long-teacher-pass")
+    with pytest.raises(SystemExit):   # not on the allowlist
+        await teacher_accounts.create_account("someone@example.com", "X", "long-teacher-pass")
+
+    assert await teacher_accounts.set_password(TEACHER_EMAIL, "another-long-pass") == 0
+    assert (await login(TEACHER_EMAIL, "long-teacher-pass")).status_code == 401
+    assert (await login(TEACHER_EMAIL, "another-long-pass")).status_code == 200

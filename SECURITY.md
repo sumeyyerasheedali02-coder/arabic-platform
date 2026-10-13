@@ -28,6 +28,25 @@ What to do, in order:
    **not** done automatically. Rotation (steps 1–2) is what actually removes
    the risk; history rewriting is only hygiene afterwards.
 
+## Teacher accounts
+
+Teacher rights belong to the accounts whose e-mail is listed in `TEACHER_EMAILS`.
+The platform does not verify e-mail ownership, so:
+
+- An allowlisted address can no longer be registered through the public
+  sign-up form (the API answers 403). Before this change, whoever registered
+  that address first — or any upper/lower-case variant of it — received
+  teacher rights and could read every student's name, e-mail and progress.
+- The teacher account is created by the server operator:
+  `python -m tools.teacher_accounts create --email <address> --name "<name>"`.
+- E-mail addresses are now compared without regard to letter case everywhere.
+
+**Review needed once:** accounts that already existed were not verified. Run
+`python -m tools.teacher_accounts list` against the production database. If an
+address shows more than one account, or you are not sure who registered it,
+delete the extra rows and reset the password with
+`python -m tools.teacher_accounts set-password --email <address>`.
+
 ## Reporting a problem
 
 If you find a vulnerability, contact the project maintainer privately rather
