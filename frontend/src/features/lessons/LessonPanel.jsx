@@ -218,8 +218,7 @@ function VocabularyTab({ words }) {
  * Slide-in window showing one lesson: full screen on mobile, side panel on desktop.
  * Mount it with `key={lesson.id}` so each lesson starts on its own default tab.
  */
-export default function LessonPanel({ lesson, unitVocab }) {
-  const navigate = useNavigate()
+export default function LessonPanel({ lesson, unitVocab, onClose }) {
   const [tab, setTab] = useState(() => defaultTab(lesson))
   const query = useApiData(
     hasDialogues(lesson) ? `dialogues:${lesson.id}` : null,
@@ -239,15 +238,15 @@ export default function LessonPanel({ lesson, unitVocab }) {
     return () => { document.body.style.overflow = prev }
   }, [])
 
-  const leave = () => navigate(`/lessons/${lesson.id}`)
-
+  // The ×, "العودة إلى الدروس" and a click outside all close the panel and
+  // leave the student on the lessons page they opened it from.
   // Rendered into <body> so no ancestor layout can clip or offset it
   return createPortal(
     <div className="lesson-panel-overlay">
-      <div className="lesson-panel-backdrop" onClick={leave} />
+      <div className="lesson-panel-backdrop" onClick={onClose} />
 
       <div className="lesson-panel">
-        <PanelHeader lesson={lesson} onBack={leave} />
+        <PanelHeader lesson={lesson} onBack={onClose} />
         <PanelTabs active={tab} onChange={setTab} />
 
         <div className="lesson-panel-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: 20 }}>
