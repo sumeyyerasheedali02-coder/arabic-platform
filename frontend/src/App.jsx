@@ -1,39 +1,16 @@
-import { useState } from 'react'
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import Sidebar from './components/Sidebar'
-import Header from './components/Header'
-import LoginRegister from './pages/LoginRegister'
-import Dashboard from './pages/Dashboard'
-import Lessons from './pages/Lessons'
-import SRSFlashcards from './pages/SRSFlashcards'
-import Exercises from './pages/Exercises'
-import Teacher from './pages/Teacher'
-import LessonDetail from './pages/LessonDetail'
-import ArabicChat from './pages/ArabicChat'
-import Landing from './pages/Landing'
-
-function AppLayout({ children }) {
-  const [selectedUnit, setSelectedUnit] = useState(null)
-  // Mobile: the sidebar is a slide-in drawer opened from the header menu button
-  const [menuOpen, setMenuOpen] = useState(false)
-  const location = useLocation()
-  const [menuPath, setMenuPath] = useState(location.pathname)
-  if (menuPath !== location.pathname) {   // close the drawer after navigating
-    setMenuPath(location.pathname)
-    setMenuOpen(false)
-  }
-  return (
-    <div className="app-grid">
-      <Sidebar selectedUnit={selectedUnit} onSelectUnit={setSelectedUnit} open={menuOpen} />
-      {menuOpen && <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} />}
-      <Header onMenuClick={() => setMenuOpen(v => !v)} />
-      <main className="app-main" style={{ background: 'var(--cream)', minHeight: 0 }}>
-        {children}
-      </main>
-    </div>
-  )
-}
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './auth/AuthContext'
+import { useAuth } from './auth/useAuth'
+import AppLayout from './layout/AppLayout'
+import LandingPage from './features/landing/LandingPage'
+import LoginPage from './features/auth/LoginPage'
+import LessonsPage from './features/lessons/LessonsPage'
+import LessonDetailPage from './features/lessons/LessonDetailPage'
+import ExercisesPage from './features/exercises/ExercisesPage'
+import FlashcardsPage from './features/srs/FlashcardsPage'
+import DashboardPage from './features/dashboard/DashboardPage'
+import TeacherPage from './features/teacher/TeacherPage'
+import ChatPage from './features/chat/ChatPage'
 
 // Students are sent to their own progress page; only the teacher reaches /teacher
 // (the backend enforces this too — this only avoids showing an empty page)
@@ -43,21 +20,23 @@ function TeacherOnly({ children }) {
   return student?.is_teacher ? children : <Navigate to="/dashboard" replace />
 }
 
+// HashRouter: the static host serves index.html only at the root, so the route
+// lives after the # and survives a page reload.
 export default function App() {
   return (
     <AuthProvider>
-<HashRouter>
+      <HashRouter>
         <Routes>
-                      <Route path="/landing" element={<Landing />} />
-<Route path="/login" element={<LoginRegister />} />
-          <Route path="/" element={localStorage.getItem("token") ? <Navigate to="/lessons" replace /> : <Navigate to="/landing" replace />} />
-          <Route path="/lessons"           element={<AppLayout><Lessons /></AppLayout>} />
-          <Route path="/lessons/:lessonId" element={<AppLayout><LessonDetail /></AppLayout>} />
-          <Route path="/exercises"         element={<AppLayout><Exercises /></AppLayout>} />
-          <Route path="/srs"               element={<AppLayout><SRSFlashcards /></AppLayout>} />
-          <Route path="/dashboard"         element={<AppLayout><Dashboard /></AppLayout>} />
-          <Route path="/teacher"           element={<TeacherOnly><AppLayout><Teacher /></AppLayout></TeacherOnly>} />
-          <Route path="/chat"              element={<AppLayout><ArabicChat /></AppLayout>} />
+          <Route path="/landing" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={localStorage.getItem('token') ? <Navigate to="/lessons" replace /> : <Navigate to="/landing" replace />} />
+          <Route path="/lessons"           element={<AppLayout><LessonsPage /></AppLayout>} />
+          <Route path="/lessons/:lessonId" element={<AppLayout><LessonDetailPage /></AppLayout>} />
+          <Route path="/exercises"         element={<AppLayout><ExercisesPage /></AppLayout>} />
+          <Route path="/srs"               element={<AppLayout><FlashcardsPage /></AppLayout>} />
+          <Route path="/dashboard"         element={<AppLayout><DashboardPage /></AppLayout>} />
+          <Route path="/teacher"           element={<TeacherOnly><AppLayout><TeacherPage /></AppLayout></TeacherOnly>} />
+          <Route path="/chat"              element={<AppLayout><ChatPage /></AppLayout>} />
           <Route path="*"                  element={<Navigate to="/" replace />} />
         </Routes>
       </HashRouter>

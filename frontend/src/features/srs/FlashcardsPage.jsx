@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import api from '../api/client'
-import { useAuth } from '../context/AuthContext'
+import api from '../../api/client'
+import { useAuth } from '../../auth/useAuth'
+import { CenteredSpinner } from '../../components/Spinner'
 
 // 4 rating buttons mapped to SM-2 quality scores
 const RATINGS = [
@@ -11,7 +12,7 @@ const RATINGS = [
   { q: 5, label: 'سهل جداً',  sub: '× 14 يوم', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
 ]
 
-export default function SRSFlashcards() {
+export default function FlashcardsPage() {
   const { token }                   = useAuth()
   const [cards, setCards]           = useState([])
   const [current, setCurrent]       = useState(0)
@@ -72,11 +73,7 @@ export default function SRSFlashcards() {
   )
 
   // ── Loading ──
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
-      <div style={{ width: 32, height: 32, border: '3px solid var(--border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
-    </div>
-  )
+  if (loading) return <CenteredSpinner size={32} height={300} />
 
   // ── No cards ──
   if (!loading && cards.length === 0) return (

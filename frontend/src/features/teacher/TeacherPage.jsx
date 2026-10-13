@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import api from '../api/client'
+import api from '../../api/client'
+import { CenteredSpinner } from '../../components/Spinner'
 
-export default function Teacher() {
+export default function TeacherPage() {
   const [students, setStudents]   = useState([])
   const [unitStats, setUnitStats] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -24,11 +25,7 @@ export default function Teacher() {
       .finally(() => setLoading(false))
   }, [])
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 280 }}>
-      <div style={{ width: 32, height: 32, border: '3px solid var(--border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
-    </div>
-  )
+  if (loading) return <CenteredSpinner size={32} height={280} />
 
   if (error) return (
     <div style={{ maxWidth: 480, margin: '80px auto', textAlign: 'center', padding: '0 20px' }}>

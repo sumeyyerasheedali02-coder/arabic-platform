@@ -1,15 +1,13 @@
 import { useState, useRef, useEffect } from "react";
+import api from "../../api/client";
 
-const API = import.meta.env.VITE_API_URL || "https://adaptable-solace-production-e226.up.railway.app";
-
-export default function ArabicChat() {
+export default function ChatPage() {
   const [messages, setMessages] = useState([
     { role: "model", content: "أهلاً! أنا مرشد، مساعدك في تعلم العربية 🌙" }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
-  const token = localStorage.getItem("token") || "";
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -20,15 +18,15 @@ export default function ArabicChat() {
     setMessages(prev => [...prev, { role: "user", content: text }]);
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: token ? `Bearer ${token}` : "" },
-        body: JSON.stringify({ messages: [...messages, {role:"user",content:text}].map(m => ({ role: m.role, content: m.content })) }),
+      // The server keeps no history: the whole conversation is sent every time.
+      const res = await api.post("/chat", {
+        messages: [...messages, {role:"user",content:text}].map(m => ({ role: m.role, content: m.content })),
       });
-      const data = await res.json();
-      setMessages(prev => [...prev, { role: "model", content: res.ok ? data.reply : "⚠️ تأكد من إعداد Gemini API key" }]);
-    } catch {
-      setMessages(prev => [...prev, { role: "model", content: "⚠️ تعذّر الاتصال بالخادم" }]);
+      setMessages(prev => [...prev, { role: "model", content: res.data.reply }]);
+    } catch (err) {
+      // The server answered with an error (tutor not configured / unavailable) vs. no answer at all
+      const content = err.response ? "⚠️ تأكد من إعداد Gemini API key" : "⚠️ تعذّر الاتصال بالخادم";
+      setMessages(prev => [...prev, { role: "model", content }]);
     }
     setLoading(false);
   };

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import api from '../api/client'
+import api from '../../api/client'
+import { useAuth } from '../../auth/useAuth'
+import { CenteredSpinner } from '../../components/Spinner'
 
 function StatCard({ icon, label, value, sub }) {
   return (
@@ -17,7 +18,7 @@ function StatCard({ icon, label, value, sub }) {
   )
 }
 
-export default function Dashboard() {
+export default function DashboardPage() {
   const { student, token }      = useAuth()
   const [units, setUnits]       = useState([])
   const [progress, setProgress] = useState([])
@@ -43,11 +44,7 @@ export default function Dashboard() {
   const completedLessons = progress.filter(p => p.status === 'completed').length
   const totalScore       = progress.reduce((sum, p) => sum + (p.score || 0), 0)
 
-  if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 260 }}>
-      <div style={{ width: 32, height: 32, border: '3px solid var(--border)', borderTopColor: 'var(--gold)', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
-    </div>
-  )
+  if (loading) return <CenteredSpinner size={32} height={260} />
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 20px' }}>

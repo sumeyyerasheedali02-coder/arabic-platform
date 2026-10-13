@@ -22,7 +22,7 @@ function Logo() {
   )
 }
 
-export default function Landing() {
+export default function LandingPage() {
   const stats = [
     { v: '48',    l: 'وحدة دراسية' },
     { v: '+1000', l: 'مفردة (AR·TR·EN)' },

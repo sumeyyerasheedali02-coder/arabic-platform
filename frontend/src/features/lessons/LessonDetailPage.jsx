@@ -1,23 +1,18 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import api from "../../api/client";
 
-const API = "http://localhost:8003";
-
-export default function LessonDetail() {
+export default function LessonDetailPage() {
   const { lessonId } = useParams();
   const navigate = useNavigate();
   const [lesson, setLesson] = useState(null);
   const [activeTab, setActiveTab] = useState("vocabulary");
   const [loading, setLoading] = useState(true);
   const [playingWord, setPlayingWord] = useState(null);
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetch(`${API}/lessons/${lessonId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(r => r.json())
-      .then(data => { setLesson(data); setLoading(false); })
+    api.get(`/lessons/${lessonId}`)
+      .then(r => { setLesson(r.data); setLoading(false); })
       .catch(() => setLoading(false));
   }, [lessonId]);
 
