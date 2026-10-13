@@ -73,6 +73,7 @@ class Settings:
     google_api_key: str
     gemini_model: str
     seed_on_empty_db: bool
+    tracking_site_url: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -86,6 +87,7 @@ class Settings:
             google_api_key=os.getenv("GOOGLE_API_KEY", "").strip(),
             gemini_model=os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL,
             seed_on_empty_db=_flag("SEED_ON_EMPTY_DB", True),
+            tracking_site_url=os.getenv("TRACKING_SITE_URL", "").strip().rstrip("/"),
         )
 
     def is_teacher_email(self, email: str | None) -> bool:

@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { staffHome, staffPageTitle } from './staffNavigation'
+import TrackingLink from '../components/TrackingLink'
 
 const NAV = [
   { to: '/lessons',   label: 'الدروس' },
@@ -65,6 +66,8 @@ export default function Header({ onMenuClick }) {
           )
         })}
       </nav>}
+
+      <TrackingLink />
 
       {/* User info + logout */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>

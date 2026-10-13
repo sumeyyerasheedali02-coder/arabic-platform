@@ -7,6 +7,18 @@ from app.tracking.calculations import overall_result, term_result, weekly_total
 from app.tracking.models import TrackingAudit, TrackingCycle, TrackingEntry
 
 
+async def test_public_tracking_link_contains_no_account_or_grade_data(client, monkeypatch):
+    from types import SimpleNamespace
+
+    from app.tracking import router
+
+    monkeypatch.setattr(router, "get_settings",
+                        lambda: SimpleNamespace(tracking_site_url="https://tracking.example.com"))
+    response = await client.get("/api/tracking/site")
+    assert response.status_code == 200
+    assert response.json() == {"site_url": "https://tracking.example.com"}
+
+
 async def create(client, headers, section="A", year="2026-2027"):
     response = await client.post("/api/tracking/cycles", headers=headers,
                                  json={"section": section, "academic_year": year})

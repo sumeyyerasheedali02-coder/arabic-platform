@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
 from app.models import Student
 from app.security import get_current_account, get_current_teacher
@@ -22,6 +23,12 @@ from app.tracking.schemas import CycleCreate, Publication, TermSave, WeekCreate,
 
 router = APIRouter(prefix="/api/tracking", tags=["tracking"])
 staff = [Depends(get_current_teacher)]
+
+
+@router.get("/site")
+async def tracking_site():
+    """Public navigation metadata only; grades still require an authenticated account."""
+    return {"site_url": get_settings().tracking_site_url or None}
 
 
 @router.get("/cycles")
