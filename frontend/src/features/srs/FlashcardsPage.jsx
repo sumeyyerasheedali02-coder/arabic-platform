@@ -5,6 +5,7 @@ import { useApiData } from '../../api/useApiData'
 import { useAuth } from '../../auth/useAuth'
 import ErrorState from '../../components/ErrorState'
 import { CenteredSpinner } from '../../components/Spinner'
+import { ratingLabel } from './intervals'
 
 const NO_CARDS = []
 const newSession = (cards) => ({
@@ -12,12 +13,13 @@ const newSession = (cards) => ({
   stats: { reviewed: 0, easy: 0, hard: 0 },
 })
 
-// 4 rating buttons mapped to SM-2 quality scores
+// 4 rating buttons mapped to SM-2 quality scores. What each one does to the
+// card (when it comes back) is shown under it and comes from the server.
 const RATINGS = [
-  { q: 1, label: 'صعب',       sub: '× 1 يوم',  bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
-  { q: 3, label: 'متوسط',     sub: '× 3 أيام', bg: '#fff7ed', color: '#d97706', border: '#fed7aa' },
-  { q: 4, label: 'سهل',       sub: '× 7 أيام', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
-  { q: 5, label: 'سهل جداً',  sub: '× 14 يوم', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
+  { q: 1, label: 'صعب',       bg: '#fef2f2', color: '#dc2626', border: '#fecaca' },
+  { q: 3, label: 'متوسط',     bg: '#fff7ed', color: '#d97706', border: '#fed7aa' },
+  { q: 4, label: 'سهل',       bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
+  { q: 5, label: 'سهل جداً',  bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' },
 ]
 
 export default function FlashcardsPage() {
@@ -243,7 +245,7 @@ export default function FlashcardsPage() {
             كيف كانت إجابتك؟
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
-            {RATINGS.map(({ q, label, sub, bg, color, border }) => (
+            {RATINGS.map(({ q, label, bg, color, border }) => (
               <button
                 key={q}
                 onClick={() => handleReview(q)}
@@ -256,7 +258,7 @@ export default function FlashcardsPage() {
                 }}
               >
                 <div style={{ fontSize: 13, fontWeight: 700, color, marginBottom: 3 }}>{label}</div>
-                <div style={{ fontSize: 10, color: 'var(--muted)' }}>{sub}</div>
+                <div style={{ fontSize: 10, color: 'var(--muted)' }}>{ratingLabel(card, q)}</div>
               </button>
             ))}
           </div>

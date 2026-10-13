@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Optional, List, Any
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 
@@ -173,6 +173,8 @@ class SRSCardOut(BaseModel):
     example_ar:     Optional[str]
     next_review:    Optional[str]
     interval_days:  int
+    # rating (0–5) -> days until the next review if the card gets that rating
+    next_interval_days: Dict[int, int] = {}
 
     model_config = {"from_attributes": True}
 

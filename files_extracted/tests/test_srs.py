@@ -1,10 +1,9 @@
 from datetime import date, timedelta
 
-import pytest
 from sqlalchemy import select
 
 from ._app import models
-from app.services.srs import sm2
+from app.services.srs import preview_intervals, sm2
 
 
 def _iso(days):
@@ -80,7 +79,6 @@ async def test_review_rejects_out_of_range_quality(client, register, content):
     assert res.status_code == 422
 
 
-@pytest.mark.xfail(reason="a new card has None fields before flush, so SM-2 raises -> 500")
 async def test_reviewing_a_word_without_a_card_creates_the_card(client, register, content, db):
     student = await register()
     res = await client.post("/api/me/srs/review", headers=student.headers,
@@ -92,9 +90,34 @@ async def test_reviewing_a_word_without_a_card_creates_the_card(client, register
     assert (card.repetitions, card.interval_days) == (1, 1)
 
 
-@pytest.mark.xfail(reason="review of a word that does not exist is not rejected")
 async def test_reviewing_an_unknown_word_is_404(client, register):
     student = await register()
     res = await client.post("/api/me/srs/review", headers=student.headers,
                             json={"vocabulary_id": 99999, "quality": 4})
     assert res.status_code == 404
+
+
+def test_preview_lists_the_interval_of_every_rating():
+    assert preview_intervals(0, 2.5, 1) == {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1}      # new card
+    assert preview_intervals(1, 2.5, 1) == {0: 1, 1: 1, 2: 1, 3: 6, 4: 6, 5: 6}      # second review
+    assert preview_intervals(2, 2.5, 6) == {0: 1, 1: 1, 2: 1, 3: 15, 4: 15, 5: 15}   # later reviews
+    assert preview_intervals(4, 1.3, 20)[5] == 26
+
+
+async def test_due_cards_say_what_each_rating_will_do(client, register, content):
+    student = await register()
+    await client.post(f"/api/me/srs/add-unit/{content.unit_a}", headers=student.headers)
+    word = content.vocab_a[0]
+
+    card = next(c for c in (await client.get("/api/me/srs/due", headers=student.headers)).json()
+                if c["vocabulary_id"] == word)
+    assert card["next_interval_days"] == {"0": 1, "1": 1, "2": 1, "3": 1, "4": 1, "5": 1}
+
+    # The preview is exactly what a review then does.
+    await client.post("/api/me/srs/review", headers=student.headers, json={"vocabulary_id": word, "quality": 4})
+    from ._app import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        stored = (await db.execute(select(models.SRSCard).where(
+            models.SRSCard.student_id == student.id, models.SRSCard.vocabulary_id == word))).scalar_one()
+    expected = preview_intervals(stored.repetitions, stored.ease_factor, stored.interval_days)
+    assert expected[4] == 6 and expected[1] == 1

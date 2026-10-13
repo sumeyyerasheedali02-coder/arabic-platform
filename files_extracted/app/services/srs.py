@@ -48,8 +48,18 @@ def sm2(quality: int, repetitions: int, ease_factor: float, interval_days: int) 
     )
 
 
-def get_due_cards(cards: list, today: str = None) -> list:
-    """إرجاع البطاقات التي حان وقت مراجعتها"""
-    if today is None:
-        today = date.today().isoformat()
-    return [c for c in cards if c.next_review <= today]
+# State of a card that has never been reviewed.
+NEW_CARD_EASE_FACTOR = 2.5
+NEW_CARD_INTERVAL_DAYS = 1
+NEW_CARD_REPETITIONS = 0
+
+QUALITIES = range(6)
+
+
+def preview_intervals(repetitions: int, ease_factor: float, interval_days: int) -> dict[int, int]:
+    """Days until the next review for every possible rating of a card.
+
+    Lets the review screen tell the student what each button really does.
+    """
+    return {quality: sm2(quality, repetitions, ease_factor, interval_days).interval_days
+            for quality in QUALITIES}

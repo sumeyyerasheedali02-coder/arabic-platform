@@ -2,7 +2,7 @@
 from datetime import date, datetime
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,7 +10,9 @@ from app.database import get_db
 from app.models import SRSCard, Vocabulary
 from app.schemas import SRSCardOut, SRSReview
 from app.security import get_current_student
-from app.services.srs import sm2
+from app.services.srs import (
+    NEW_CARD_EASE_FACTOR, NEW_CARD_INTERVAL_DAYS, NEW_CARD_REPETITIONS, preview_intervals, sm2,
+)
 
 router = APIRouter(prefix="/api/me/srs", tags=["srs"])
 
@@ -41,6 +43,8 @@ async def get_due_srs_cards(
             example_ar=row.Vocabulary.example_ar,
             next_review=row.SRSCard.next_review,
             interval_days=row.SRSCard.interval_days,
+            next_interval_days=preview_intervals(
+                row.SRSCard.repetitions, row.SRSCard.ease_factor, row.SRSCard.interval_days),
         )
         for row in rows
     ]
@@ -63,7 +67,17 @@ async def review_srs_card(
     card = result.scalar_one_or_none()
 
     if not card:
-        card = SRSCard(student_id=student_id, vocabulary_id=data.vocabulary_id)
+        # First review of a word that was never added to the student's cards.
+        word = await db.execute(select(Vocabulary.id).where(Vocabulary.id == data.vocabulary_id))
+        if word.scalar_one_or_none() is None:
+            raise HTTPException(status_code=404, detail="الكلمة غير موجودة")
+        # Set explicitly: column defaults are only applied when the row is
+        # written, and SM-2 needs the numbers now.
+        card = SRSCard(
+            student_id=student_id, vocabulary_id=data.vocabulary_id,
+            ease_factor=NEW_CARD_EASE_FACTOR, interval_days=NEW_CARD_INTERVAL_DAYS,
+            repetitions=NEW_CARD_REPETITIONS,
+        )
         db.add(card)
 
     srs_result = sm2(
