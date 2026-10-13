@@ -149,12 +149,13 @@ class ProgressOut(BaseModel):
 
 # ── AI Chat ───────────────────────────────
 class ChatMessage(BaseModel):
-    role:    str   # "user" | "assistant"
-    content: str
+    role:    str   # "user"; anything else ("model", "assistant") is the tutor
+    content: str = Field(min_length=1, max_length=4000)
 
 class ChatRequest(BaseModel):
     unit_id:  Optional[int] = None
-    messages: List[ChatMessage]
+    # The whole conversation so far, oldest first; the last entry is the new message.
+    messages: List[ChatMessage] = Field(min_length=1)
 
 class ChatResponse(BaseModel):
     reply:       str

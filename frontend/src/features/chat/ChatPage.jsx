@@ -24,8 +24,10 @@ export default function ChatPage() {
       });
       setMessages(prev => [...prev, { role: "model", content: res.data.reply }]);
     } catch (err) {
-      // The server answered with an error (tutor not configured / unavailable) vs. no answer at all
-      const content = err.response ? "⚠️ تأكد من إعداد Gemini API key" : "⚠️ تعذّر الاتصال بالخادم";
+      // The server explains why the tutor could not answer; no response at all means no connection
+      const detail = err.response?.data?.detail;
+      const content = !err.response ? "⚠️ تعذّر الاتصال بالخادم"
+        : typeof detail === "string" ? `⚠️ ${detail}` : "⚠️ تأكد من إعداد Gemini API key";
       setMessages(prev => [...prev, { role: "model", content }]);
     }
     setLoading(false);

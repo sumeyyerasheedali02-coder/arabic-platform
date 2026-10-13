@@ -1,5 +1,5 @@
 """Conversation with the Arabic tutor (open to guests)."""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,5 +26,8 @@ async def _unit_context(db: AsyncSession, unit_id: int) -> str:
 async def chat_with_ai(data: ChatRequest, db: AsyncSession = Depends(get_db)):
     """The client sends the whole conversation each time; nothing is stored server-side."""
     unit_context = await _unit_context(db, data.unit_id) if data.unit_id else ""
-    reply = await ai.generate_reply(data.messages, unit_context)
+    try:
+        reply = await ai.generate_reply(data.messages, unit_context)
+    except ai.TutorUnavailable as problem:
+        raise HTTPException(status_code=problem.status_code, detail=problem.reason) from None
     return ChatResponse(reply=reply, corrections=[])

@@ -1,5 +1,6 @@
 """The Arabic tutor: prompt construction and the call to Google Gemini."""
-from typing import Optional, Sequence
+import logging
+from typing import Sequence
 
 from google import genai
 from google.genai import types as genai_types
@@ -8,10 +9,23 @@ from app.config import get_settings
 from app.schemas import ChatMessage
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 _client = None
 
 UNIT_VOCABULARY_LIMIT = 30
+# The client resends the whole conversation with every message. Only the most
+# recent part is passed on, so a long chat cannot grow the request without limit.
+MAX_HISTORY_MESSAGES = 40
+
+
+class TutorUnavailable(Exception):
+    """The tutor could not answer. `reason` is safe to show to the student."""
+
+    def __init__(self, reason: str, status_code: int = 503):
+        super().__init__(reason)
+        self.reason = reason
+        self.status_code = status_code
 
 
 def get_client():
@@ -47,22 +61,38 @@ def build_system_prompt(unit_context: str = "") -> str:
 تذكر: هدفك هو مساعدة الطالب على التواصل بالعربية بشكل طبيعي."""
 
 
-async def generate_reply(messages: Sequence[ChatMessage], unit_context: str = "") -> Optional[str]:
-    """Send the whole conversation to the model and return its reply text."""
+async def generate_reply(messages: Sequence[ChatMessage], unit_context: str = "") -> str:
+    """Send the conversation to the model and return its reply text.
+
+    Raises TutorUnavailable when there is no usable answer; provider errors are
+    logged here and never passed on to the caller.
+    """
+    if not settings.google_api_key:
+        raise TutorUnavailable("المساعد الذكي غير مفعّل على هذا الخادم")
+
     contents = [
         genai_types.Content(
             # The provider only knows "user" and "model".
             role="user" if message.role == "user" else "model",
             parts=[genai_types.Part(text=message.content)],
         )
-        for message in messages
+        for message in messages[-MAX_HISTORY_MESSAGES:]
     ]
-    response = await get_client().aio.models.generate_content(
-        model=settings.gemini_model,
-        contents=contents,
-        config=genai_types.GenerateContentConfig(
-            system_instruction=build_system_prompt(unit_context),
-            temperature=0.7,
-        ),
-    )
-    return response.text
+    try:
+        response = await get_client().aio.models.generate_content(
+            model=settings.gemini_model,
+            contents=contents,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=build_system_prompt(unit_context),
+                temperature=0.7,
+            ),
+        )
+        reply = (response.text or "").strip()
+    except Exception:
+        logger.exception("The tutor request to the AI provider failed")
+        raise TutorUnavailable("المساعد الذكي غير متاح حالياً، حاول بعد قليل") from None
+
+    if not reply:
+        # e.g. the provider withheld the answer
+        raise TutorUnavailable("لم يصل رد من المساعد، حاول صياغة رسالتك بشكل آخر", status_code=502)
+    return reply
