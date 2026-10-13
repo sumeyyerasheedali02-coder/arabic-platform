@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { completedLessons, useProgress } from '../features/progress/useProgress'
 import { useUnits } from '../features/units/useUnits'
@@ -125,6 +125,8 @@ export default function Sidebar({ open, onNavigate }) {
 
       {/* Overall progress */}
       <div style={{ padding: 16, borderTop: '1px solid rgba(255,255,255,.06)' }}>
+        {student && <Link to="/account" onClick={onNavigate} style={{ display: 'block', marginBottom: 12,
+          color: '#E8D48A', fontSize: 12, textDecoration: 'none' }}>إعدادات الحساب</Link>}
         {!student?.is_teacher && !student?.is_admin && <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 9, padding: '10px 12px', marginBottom: 10 }}>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', marginBottom: 6, letterSpacing: '.08em' }}>
             OVERALL PROGRESS

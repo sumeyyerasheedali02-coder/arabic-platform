@@ -74,6 +74,12 @@ class Settings:
     gemini_model: str
     seed_on_empty_db: bool
     tracking_site_url: str = ""
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    password_reset_url: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -88,6 +94,12 @@ class Settings:
             gemini_model=os.getenv("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL,
             seed_on_empty_db=_flag("SEED_ON_EMPTY_DB", True),
             tracking_site_url=os.getenv("TRACKING_SITE_URL", "").strip().rstrip("/"),
+            smtp_host=os.getenv("SMTP_HOST", "").strip(),
+            smtp_port=int(os.getenv("SMTP_PORT") or 587),
+            smtp_username=os.getenv("SMTP_USERNAME", "").strip(),
+            smtp_password=os.getenv("SMTP_PASSWORD", ""),
+            smtp_from=os.getenv("SMTP_FROM", "").strip(),
+            password_reset_url=os.getenv("PASSWORD_RESET_URL", "").strip(),
         )
 
     def is_teacher_email(self, email: str | None) -> bool:

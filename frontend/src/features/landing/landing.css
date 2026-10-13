@@ -1,0 +1,53 @@
+/* Size the welcome screen by its available height as well as its width. */
+.landing-page {
+  min-height: 100dvh !important;
+  padding: clamp(12px, 3dvh, 32px) 20px !important;
+}
+.landing-content { width: 100%; }
+.landing-brand svg {
+  display: block;
+  width: clamp(64px, 16dvh, 140px);
+  height: clamp(64px, 16dvh, 140px);
+}
+.landing-badge {
+  margin-top: clamp(8px, 2dvh, 24px) !important;
+  padding: 5px 18px !important;
+}
+.landing-content h1 {
+  margin-top: clamp(12px, 2.5dvh, 28px) !important;
+  font-size: clamp(36px, min(6vw, 9dvh), 80px) !important;
+}
+.landing-content h1 + p {
+  margin-top: clamp(8px, 1.8dvh, 18px) !important;
+  font-size: clamp(15px, 2.3dvh, 18px) !important;
+}
+.landing-content .aq-cta {
+  margin-top: clamp(16px, 3.5dvh, 36px) !important;
+  padding: 12px 32px !important;
+}
+.landing-stats {
+  margin-top: clamp(20px, 5dvh, 48px) !important;
+  padding-top: clamp(12px, 2.5dvh, 24px) !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+@media (max-width: 540px) {
+  .landing-page { padding: 12px 14px !important; }
+  .landing-stats { gap: 14px 8px !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .landing-content p[lang="tr"] { font-size: 12px !important; }
+  .landing-stats > div > div:last-child { font-size: 11px !important; margin-top: 4px !important; }
+}
+@media (max-height: 500px) and (min-width: 541px) {
+  .landing-brand svg { width: 54px; height: 54px; }
+  .landing-content h1 { font-size: 36px !important; margin-top: 8px !important; }
+  .landing-badge { margin-top: 4px !important; padding-block: 2px !important; }
+  .landing-content h1 + p { font-size: 14px !important; line-height: 1.4 !important; }
+  .landing-content p[lang="tr"] { margin-top: 4px !important; font-size: 12px !important; }
+  .landing-content .aq-cta { margin-top: 10px !important; padding-block: 7px !important; }
+  .landing-stats { margin-top: 12px !important; padding-top: 8px !important; }
+  .landing-stats > div > div:first-child { font-size: 26px !important; }
+  .landing-stats > div > div:last-child { margin-top: 4px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing-brand { animation: none !important; }
+}

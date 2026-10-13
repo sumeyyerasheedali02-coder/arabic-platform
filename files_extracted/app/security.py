@@ -64,6 +64,8 @@ async def get_current_account(
     )
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        if payload.get("purpose") is not None:
+            raise credentials_exception
         # python-jose requires `sub` to be a string; ids are stored as str(id).
         student_id = int(payload.get("sub"))
     except (JWTError, TypeError, ValueError):

@@ -274,6 +274,9 @@ export default function LoginPage() {
                 </p>
               )}
             </form>
+            <Link to="/forgot-password" style={{ display: 'block', marginTop: 16, color: 'var(--aq-navy)', textAlign: 'center' }}>
+              {lang === 'tr' ? 'Şifremi unuttum' : 'نسيت كلمة المرور؟'}
+            </Link>
 
             {/* Divider + Guest */}
             <div style={{ position: 'relative', marginTop: 24, paddingTop: 20 }}>
