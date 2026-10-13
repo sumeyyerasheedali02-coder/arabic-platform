@@ -7,9 +7,14 @@ export default function ChatPage() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const bottomRef = useRef(null);
+  const listRef = useRef(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  // Keep the newest message in view by scrolling the message list itself.
+  // (scrollIntoView also scrolled the whole page, pushing the chat title away.)
+  useEffect(() => {
+    const list = listRef.current;
+    list?.scrollTo({ top: list.scrollHeight, behavior: "smooth" });
+  }, [messages]);
 
   const send = async () => {
     const text = input.trim();
@@ -43,7 +48,7 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div style={{flex:1,overflowY:"auto",padding:"1.25rem",display:"flex",flexDirection:"column",gap:"0.875rem"}}>
+      <div ref={listRef} style={{flex:1,overflowY:"auto",padding:"1.25rem",display:"flex",flexDirection:"column",gap:"0.875rem"}}>
         {messages.map((msg, i) => (
           <div key={i} style={{display:"flex",gap:"0.625rem",alignItems:"flex-end",flexDirection:msg.role==="user"?"row-reverse":"row"}}>
             {msg.role==="model" && (
@@ -60,7 +65,7 @@ export default function ChatPage() {
             <div style={{background:"#fff",border:"1px solid #e8e0d0",borderRadius:"16px",padding:"0.875rem 1rem",color:"#C9A84C",fontSize:"20px",letterSpacing:"4px"}}>···</div>
           </div>
         )}
-        <div ref={bottomRef} />
+        <div />
       </div>
 
       <div style={{padding:"0.875rem 1.25rem",background:"#fff",borderTop:"1px solid #e8e0d0",display:"flex",alignItems:"center",gap:"0.625rem"}}>
