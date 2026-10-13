@@ -1,5 +1,5 @@
 """HTTP routers, one module per feature. All paths live under /api."""
-from app.routers import auth, chat, content, exercises, progress, srs, teacher
+from app.routers import admin, auth, chat, content, exercises, progress, srs, teacher
 
 ALL_ROUTERS = (
     auth.router,
@@ -9,4 +9,5 @@ ALL_ROUTERS = (
     srs.router,
     chat.router,
     teacher.router,
+    admin.router,
 )

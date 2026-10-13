@@ -23,13 +23,13 @@ async def test_register_returns_token_and_identity(register):
 async def test_register_rejects_duplicate_email(client, register):
     student = await register()
     res = await client.post("/api/auth/register", json={
-        "name": "Other", "email": student.email, "password": "secret123"})
+        "name": "Other", "email": student.email, "password": "secret123", "class_section": "A", "student_number": "00100001"})
     assert res.status_code == 400
 
 
 async def test_register_rejects_short_password(client, new_email):
     res = await client.post("/api/auth/register", json={
-        "name": "A", "email": new_email(), "password": "12345"})
+        "name": "A", "email": new_email(), "password": "12345", "class_section": "A", "student_number": "00100001"})
     assert res.status_code == 422
 
 
@@ -79,7 +79,7 @@ async def test_token_of_deleted_account_is_rejected(client, register, db):
 
 async def test_public_registration_cannot_claim_teacher_email(client):
     res = await client.post("/api/auth/register", json={
-        "name": "Impostor", "email": TEACHER_EMAIL, "password": "secret123"})
+        "name": "Impostor", "email": TEACHER_EMAIL, "password": "secret123", "class_section": "A", "student_number": "00100001"})
     assert res.status_code == 403
 
 
@@ -87,14 +87,14 @@ async def test_case_variant_of_teacher_email_gains_nothing(client, teacher):
     await teacher()
     variant = TEACHER_EMAIL.replace("teacher", "Teacher")
     res = await client.post("/api/auth/register", json={
-        "name": "Impostor", "email": variant, "password": "secret123"})
+        "name": "Impostor", "email": variant, "password": "secret123", "class_section": "A", "student_number": "00100001"})
     assert res.status_code in (400, 403)
 
 
 async def test_email_is_unique_regardless_of_case(client, register):
     student = await register(email="Mixed.Case@example.com")
     res = await client.post("/api/auth/register", json={
-        "name": "Dup", "email": "mixed.case@example.com", "password": "secret123"})
+        "name": "Dup", "email": "mixed.case@example.com", "password": "secret123", "class_section": "A", "student_number": "00100001"})
     assert res.status_code == 400
     assert student.id
 
@@ -134,7 +134,9 @@ async def test_token_without_subject_is_rejected(client):
 async def test_session_endpoint_describes_the_logged_in_account(client, register, teacher):
     student = await register(name="Zeynep Arslan")
     me = await client.get("/api/auth/me", headers=student.headers)
-    assert me.json() == {"student_id": student.id, "name": "Zeynep Arslan", "is_teacher": False}
+    assert me.json() == {"student_id": student.id, "name": "Zeynep Arslan",
+                         "is_teacher": False, "class_section": "A", "role": "student", "is_admin": False,
+                         "student_number": student.student_number}
 
     staff = await teacher()
     assert (await client.get("/api/auth/me", headers=staff.headers)).json()["is_teacher"] is True
@@ -145,7 +147,7 @@ async def test_password_longer_than_bcrypt_accepts_is_rejected_not_a_server_erro
         client, new_email, register, login):
     too_long = "ك" * 40          # 80 bytes in UTF-8
     res = await client.post("/api/auth/register", json={
-        "name": "Uzun", "email": new_email(), "password": too_long})
+        "name": "Uzun", "email": new_email(), "password": too_long, "class_section": "A", "student_number": "00100001"})
     assert res.status_code == 422
 
     student = await register()

@@ -1,195 +1,117 @@
+import { useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
 import { useApiData } from '../../api/useApiData'
+import { useAuth } from '../../auth/useAuth'
 import { CenteredSpinner } from '../../components/Spinner'
+import { useStaff } from '../staff/useStaff'
+import { CompletionBar, StaffMessage, StaffStats } from './StaffUi'
+import { apiError } from './staffFormat'
+import StudentTable from './StudentTable'
+import RecentActivity from './RecentActivity'
+import { normalizeStudentNumber } from '../auth/studentNumber'
 
-const loadReport = () => Promise.all([
-  api.get('/teacher/students'),
-  api.get('/teacher/units/stats'),
-]).then(([students, units]) => ({ students: students.data, unitStats: units.data }))
+const needsHelp = s => s.answers_count >= 5 && s.accuracy_pct < 60
 
-export default function TeacherPage() {
-  const report = useApiData('teacher-report', loadReport)
-  const students  = report.data?.students ?? []
-  const unitStats = report.data?.unitStats ?? []
-  const status = report.error?.response?.status
-  const error = !report.error ? null
-    : status === 401 || status === 403
-      ? 'هذه الصفحة مخصصة للمعلمين فقط.'
-      : 'فشل تحميل البيانات. تأكد من تشغيل الخادم.'
-
-  if (report.loading) return <CenteredSpinner size={32} height={280} />
-
-  if (error) return (
-    <div style={{ maxWidth: 480, margin: '80px auto', textAlign: 'center', padding: '0 20px' }}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>🔒</div>
-      <p style={{ color: 'var(--muted)', fontSize: 14 }}>{error}</p>
-    </div>
-  )
-
-  const totalStudents  = students.length
-  const avgScore       = totalStudents
-    ? Math.round(students.reduce((s, x) => s + (x.total_score || 0), 0) / totalStudents)
-    : 0
-  const totalLessons   = students.reduce((s, x) => s + (x.lessons_done || 0), 0)
-
-  return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 20px' }}>
-
-      {/* Page header */}
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontFamily: "'Amiri', serif", fontSize: 22, color: 'var(--navy)', marginBottom: 4 }}>
-          لوحة تحكم المعلم
+export default function TeacherPage({ view = 'overview' }) {
+  const { student } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const [search, setSearch] = useState('')
+  const sections = useStaff()
+  const selected = params.get('section') || (sections.data?.length === 1 ? sections.data[0].class_section : '')
+  const filter = params.get('filter') || 'all'
+  const report = useApiData(sections.data ? `staff-report:${student.id}:${selected}:${view}` : null, () => {
+    const query = selected ? { section: selected } : {}
+    return Promise.all([
+      api.get('/teacher/students', { params: query }),
+      view === 'overview' ? api.get('/teacher/units/stats', { params: query }) : Promise.resolve({ data: [] }),
+    ]).then(([students, units]) => ({ students: students.data, units: units.data }))
+  })
+  const activity = useApiData(view === 'overview' && sections.data
+    ? `staff-activity:${student.id}:${selected}` : null,
+    () => api.get('/teacher/activity', { params: selected ? { section: selected } : {} }).then(r => r.data))
+  function changeParam(key, value) {
+    const next = new URLSearchParams(params)
+    if (value && value !== 'all') next.set(key, value)
+    else next.delete(key)
+    setParams(next)
+  }
+  function refresh() { sections.reload(); report.reload(); activity.reload() }
+  if (sections.loading || report.loading || activity.loading) return <CenteredSpinner size={32} height={280} />
+  const error = sections.error || report.error || activity.error
+  if (error) return <div className="staff-page"><StaffMessage error={apiError(error)} onRetry={refresh} /></div>
+  const students = report.data?.students ?? []
+  const units = report.data?.units ?? []
+  const answers = students.reduce((n, s) => n + s.answers_count, 0)
+  const correct = students.reduce((n, s) => n + s.correct_answers, 0)
+  const visible = students.filter(s =>
+    `${s.name} ${s.email} ${s.student_number || ''}`.toLowerCase().includes(normalizeStudentNumber(search).toLowerCase())
+    && (filter === 'all' || (filter === 'help' ? needsHelp(s) : s.answers_count === 0)))
+  const base = student.is_admin ? '/admin/students' : '/teacher/students'
+  const filteredLink = `${base}?${new URLSearchParams({ ...(selected ? { section: selected } : {}), filter: 'help' })}`
+  return <div className="staff-page" dir="rtl">
+    <h1>{view === 'overview' ? 'نظرة عامة على شُعَبي' : student.is_admin ? 'الطلاب والمتابعة' : 'طلابي'}</h1>
+    <p className="staff-intro">{view === 'overview'
+      ? `مرحبًا ${student.name}. إليك تقدّم طلابك والنتائج التي تحتاج انتباهك.`
+      : 'ابحث عن الطالب وافتح ملفه لمتابعة الدروس والنتائج والأخطاء.'}</p>
+    {!student.is_admin && sections.data?.length === 0
+      ? <div className="staff-panel staff-empty">لم تُسند إليك شعبة بعد. تواصل مع مدير المنصة.</div>
+      : <>
+        <div className="staff-toolbar">
+          <label htmlFor="report-section">الشعبة</label>
+          <select id="report-section" value={selected} onChange={e => changeParam('section', e.target.value)}>
+            {sections.data?.length !== 1 && <option value="">جميع الشُّعَب {student.is_admin ? '' : 'المسندة إليك'}</option>}
+            {sections.data?.map(s => <option value={s.class_section} key={s.class_section}>
+              الشعبة {s.class_section} · {s.students_count} طالبًا
+            </option>)}
+          </select>
+          <button onClick={refresh}>تحديث</button>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-          إحصائيات الطلاب وتقدمهم في تعلم اللغة العربية
-        </div>
-      </div>
-
-      {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
-        {[
-          { label: 'إجمالي الطلاب',  value: totalStudents, icon: '👥' },
-          { label: 'متوسط النقاط',   value: avgScore,       icon: '⭐' },
-          { label: 'دروس مكتملة',    value: totalLessons,   icon: '✅' },
-        ].map(({ label, value, icon }) => (
-          <div key={label} style={{
-            background: '#fff', border: '1px solid var(--border)', borderRadius: 12,
-            padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14,
-          }}>
-            <div style={{
-              width: 42, height: 42, borderRadius: 10, background: 'var(--cream)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
-            }}>
-              {icon}
+        <StaffStats items={[
+          ['عدد الطلاب', students.length],
+          ['متوسط الإتمام', students.length
+            ? Math.round(students.reduce((n, s) => n + s.completion_pct, 0) / students.length) + '%' : '—'],
+          ['دقة الإجابات', answers ? Math.round(correct / answers * 100) + '%' : '—'],
+          ['يحتاجون متابعة', students.filter(needsHelp).length],
+        ]} />
+        {view === 'overview' ? <>
+          <section className="staff-panel">
+            <h2>شُعَبي</h2>
+            <div className="staff-unit-grid">{(sections.data ?? []).map(s =>
+              <Link className="staff-section-card" to={`${base}?section=${s.class_section}`} key={s.class_section}>
+                <strong>الشعبة {s.class_section}</strong><span>{s.students_count} طالبًا</span>
+                <small>عرض الطلاب ←</small>
+              </Link>)}</div>
+          </section>
+          <section className="staff-panel">
+            <div className="staff-toolbar"><h2>طلاب يحتاجون متابعة</h2>
+              <Link className="staff-button" to={filteredLink}>عرض القائمة</Link>
             </div>
-            <div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--navy)', fontFamily: "'Amiri', serif" }}>
-                {value}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</div>
-            </div>
+            <StudentTable students={students.filter(needsHelp).slice(0, 5)} empty="لا يوجد طلاب تنطبق عليهم مؤشرات المتابعة حاليًا." />
+            <p className="staff-intro" style={{ margin: '14px 0 0' }}>المؤشر: دقة أقل من 60% بعد خمس إجابات على الأقل.</p>
+          </section>
+          <RecentActivity items={activity.data ?? []} />
+          <details className="staff-panel staff-unit-details">
+            <summary>تقدّم الشُّعَب في الوحدات</summary>
+            <div className="staff-unit-grid">{units.map(u => <div className="staff-unit" key={u.unit_number}>
+              <h3>{u.unit_number}. {u.title_ar}</h3><CompletionBar value={u.completion_pct} />
+              <p>متوسط نقاط الدروس التي بدأها الطلاب: {u.avg_score}</p>
+            </div>)}</div>
+          </details>
+        </> : <section className="staff-panel">
+          <div className="staff-toolbar"><h2>قائمة الطلاب</h2>
+            <input className="staff-search" aria-label="البحث عن طالب" placeholder="ابحث بالاسم أو البريد أو رقم الطالب"
+              value={search} onChange={e => setSearch(e.target.value)} />
+            <select aria-label="تصفية الطلاب" value={filter} onChange={e => changeParam('filter', e.target.value)}>
+              <option value="all">جميع الطلاب</option><option value="help">يحتاجون متابعة</option>
+              <option value="new">لم يجيبوا عن تمارين بعد</option>
+            </select>
           </div>
-        ))}
-      </div>
-
-      {/* Unit stats */}
-      {unitStats.length > 0 && (
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--navy)', marginBottom: 12 }}>
-            إحصائيات الوحدات
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
-            {unitStats.map(u => (
-              <div key={u.unit_number} style={{
-                background: '#fff', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 18px',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <div style={{ fontFamily: "'Amiri', serif", fontSize: 15, color: 'var(--navy)' }}>
-                    {u.title_ar}
-                  </div>
-                  <span style={{
-                    fontSize: 10, color: 'var(--muted)',
-                    background: 'var(--cream)', border: '1px solid var(--border)',
-                    borderRadius: 6, padding: '2px 7px',
-                  }}>
-                    {u.unit_number}
-                  </span>
-                </div>
-                <div style={{ marginBottom: 6 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
-                    <span>نسبة الإتمام</span>
-                    <span style={{ color: 'var(--navy)', fontWeight: 600 }}>
-                      {Math.round(u.completion_pct || 0)}%
-                    </span>
-                  </div>
-                  <div style={{ height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', background: 'var(--gold)', borderRadius: 3,
-                      width: `${Math.min(100, u.completion_pct || 0)}%`, transition: 'width .4s',
-                    }} />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                  <span style={{ color: 'var(--muted)' }}>متوسط النقاط</span>
-                  <span style={{ color: '#1D9E75', fontWeight: 600 }}>{Math.round(u.avg_score || 0)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Students table */}
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--navy)', marginBottom: 12 }}>
-          قائمة الطلاب ({students.length})
-        </div>
-        <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: 'var(--cream)', borderBottom: '1px solid var(--border)' }}>
-                  {['#','الاسم','البريد الإلكتروني','النقاط','الدروس المكتملة','آخر نشاط'].map(h => (
-                    <th key={h} style={{
-                      padding: '10px 14px', textAlign: 'right',
-                      fontSize: 11, fontWeight: 600, color: 'var(--muted)',
-                      letterSpacing: '.04em',
-                    }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {students.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} style={{ padding: 32, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>
-                      لا يوجد طلاب مسجّلون بعد.
-                    </td>
-                  </tr>
-                ) : students.map((s, i) => (
-                  <tr
-                    key={s.student_id}
-                    style={{ borderBottom: '1px solid var(--border)' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--cream)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  >
-                    <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 11 }}>{i + 1}</td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                        <div style={{
-                          width: 30, height: 30, borderRadius: '50%', background: 'var(--gold)',
-                          color: 'var(--navy)', display: 'flex', alignItems: 'center',
-                          justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0,
-                        }}>
-                          {s.name?.[0] || '?'}
-                        </div>
-                        <span style={{ fontWeight: 500, color: 'var(--text)' }}>{s.name}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 12 }} dir="ltr">
-                      {s.email}
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{ fontWeight: 700, color: 'var(--navy)', fontFamily: "'Amiri', serif", fontSize: 15 }}>
-                        {s.total_score || 0}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 14px' }}>
-                      <span style={{ fontWeight: 600, color: '#1D9E75' }}>{s.lessons_done || 0}</span>
-                    </td>
-                    <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: 12 }} dir="ltr">
-                      {s.last_active
-                        ? new Date(s.last_active).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short', year: 'numeric' })
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+          <StudentTable students={visible} />
+          <p className="staff-intro" style={{ margin: '14px 0 0' }}>
+            يحتاج متابعة: دقة أقل من 60% بعد خمس إجابات على الأقل. هذا مؤشر للمراجعة مع الأستاذ.
+          </p>
+        </section>}
+      </>}
+  </div>
 }

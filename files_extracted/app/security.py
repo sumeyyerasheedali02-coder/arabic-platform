@@ -9,7 +9,7 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
+from app.config import ADMIN_EMAIL, get_settings
 from app.database import get_db
 from app.models import Student
 
@@ -19,8 +19,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
 def is_teacher_email(email: str) -> bool:
-    """Teachers are the accounts whose address is listed in TEACHER_EMAILS."""
+    """Legacy provisioning reservation; never grants access to an account."""
     return settings.is_teacher_email(email)
+
+
+def is_reserved_staff_email(email: str) -> bool:
+    return email.strip().lower() == ADMIN_EMAIL or is_teacher_email(email)
 
 
 # passlib is deliberately not used: passlib 1.7.4 breaks with bcrypt >= 4.
@@ -66,7 +70,8 @@ async def get_current_account(
         raise credentials_exception from None
 
     student = (await db.execute(select(Student).where(Student.id == student_id))).scalar_one_or_none()
-    if student is None:
+    if (student is None or not student.is_active
+            or payload.get("ver", 0) != student.token_version):
         raise credentials_exception
     return student
 
@@ -78,9 +83,15 @@ async def get_current_student(account: Student = Depends(get_current_account)) -
 
 async def get_current_teacher(account: Student = Depends(get_current_account)) -> int:
     """Like get_current_student, but answers 403 unless the account is a teacher."""
-    if not is_teacher_email(account.email):
+    if account.role not in ("teacher", "admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="هذه الصفحة مخصصة للأستاذ فقط",
         )
     return account.id
+
+
+async def get_current_admin(account: Student = Depends(get_current_account)) -> Student:
+    if account.role != "admin":
+        raise HTTPException(status_code=403, detail="هذه العملية مخصصة لمدير المنصة")
+    return account

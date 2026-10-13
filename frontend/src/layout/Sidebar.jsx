@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { completedLessons, useProgress } from '../features/progress/useProgress'
 import { useUnits } from '../features/units/useUnits'
+import StaffSidebar from './StaffSidebar'
 
 const AR_NUMS = ['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠']
 
@@ -36,6 +37,7 @@ export default function Sidebar({ open, onNavigate }) {
   const totalLessons    = units.reduce((s, u) => s + (u.total_lessons || 0), 0)
   const doneLessons     = completedLessons(progress).length
   const progressPct     = totalLessons > 0 ? Math.round((doneLessons / totalLessons) * 100) : 0
+  if (student?.is_teacher || student?.is_admin) return <StaffSidebar open={open} onNavigate={onNavigate} />
 
   return (
     <aside className={`app-sidebar${open ? ' open' : ''}`} style={{
@@ -71,7 +73,7 @@ export default function Sidebar({ open, onNavigate }) {
       </div>
 
       {/* Units list */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 0 4px' }}>
+      <nav className="sidebar-units" style={{ flex: 1, overflowY: 'auto', padding: '12px 0 4px' }}>
         <div style={{
           fontSize: 9, letterSpacing: '.12em', color: 'rgba(255,255,255,.3)',
           padding: '0 16px 8px', fontWeight: 500,
@@ -123,7 +125,7 @@ export default function Sidebar({ open, onNavigate }) {
 
       {/* Overall progress */}
       <div style={{ padding: 16, borderTop: '1px solid rgba(255,255,255,.06)' }}>
-        <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 9, padding: '10px 12px', marginBottom: 10 }}>
+        {!student?.is_teacher && !student?.is_admin && <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 9, padding: '10px 12px', marginBottom: 10 }}>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', marginBottom: 6, letterSpacing: '.08em' }}>
             OVERALL PROGRESS
           </div>
@@ -133,7 +135,7 @@ export default function Sidebar({ open, onNavigate }) {
           <div style={{ fontSize: 11, color: '#C9A84C', marginTop: 5, fontWeight: 500 }}>
             {progressPct}% مكتمل
           </div>
-        </div>
+        </div>}
 
         {/* Student info + logout / guest */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

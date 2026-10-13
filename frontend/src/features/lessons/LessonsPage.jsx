@@ -18,7 +18,7 @@ const loadUnitContent = (unitId) => Promise.all([
   api.get(`/units/${unitId}/vocabulary`),
 ]).then(([lessons, vocab]) => ({ lessons: lessons.data, vocab: vocab.data }))
 
-export default function LessonsPage() {
+export default function LessonsPage({ preview = false }) {
   const { token } = useAuth()
   const { units, selectedUnit, selectUnit, loading: loadingUnits, error: unitsError, reload: reloadUnits } = useUnits()
   const unitId = selectedUnit?.id
@@ -44,7 +44,7 @@ export default function LessonsPage() {
   if (unitsError && units.length === 0) return <ErrorState onRetry={reloadUnits} />
 
   return (
-    <div className="lessons-page" style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 20px' }}>
+    <div className="lessons-page">
 
       {openLesson && (
         <LessonPanel key={openLesson.id} lesson={openLesson} unitVocab={vocab} onClose={() => setOpenLessonId(null)} />
@@ -53,23 +53,23 @@ export default function LessonsPage() {
       <div className="lessons-layout" style={{ display: 'flex', gap: 20 }}>
         <UnitPicker units={units} selectedId={unitId} onSelect={selectUnit} />
 
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="lessons-content" style={{ flex: 1, minWidth: 0 }}>
           {selectedUnit ? (
             <>
               <UnitHeader
-                unit={selectedUnit} canSave={!!token}
+                unit={selectedUnit} canSave={!!token && !preview} preview={preview}
                 message={srsMsg.unitId === unitId ? srsMsg.text : ''}
                 onAddToReview={addToSRS}
               />
 
-              <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
+              <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
                 {PAGE_TABS.map(([key, label]) => (
                   <button
                     key={key}
                     onClick={() => setTab(key)}
                     className={tab === key ? 'tab-active' : 'tab-inactive'}
                     style={{
-                      padding: '10px 18px', fontSize: 13, fontWeight: 500,
+                      padding: '8px 16px', fontSize: 13, fontWeight: 500,
                       background: 'none', border: 'none', borderBottom: tab === key ? '2px solid var(--gold)' : '2px solid transparent',
                       cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', transition: 'all .15s',
                       color: tab === key ? 'var(--navy)' : 'var(--muted)',
@@ -85,7 +85,7 @@ export default function LessonsPage() {
               ) : content.error ? (
                 <ErrorState compact onRetry={content.reload} />
               ) : tab === 'lessons' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
                   {lessons.map(lesson => <LessonCard key={lesson.id} lesson={lesson} onOpen={l => setOpenLessonId(l.id)} />)}
                 </div>
               ) : (

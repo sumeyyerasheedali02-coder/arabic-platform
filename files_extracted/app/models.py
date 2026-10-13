@@ -2,6 +2,7 @@
 from sqlalchemy import (
     JSON,
     Boolean,
+    CheckConstraint,
     Column,
     DateTime,
     Float,
@@ -146,13 +147,23 @@ class Exercise(Base):
 # ─────────────────────────────────────────
 class Student(Base):
     __tablename__ = "students"
+    __table_args__ = (Index("ux_students_student_number", "student_number", unique=True),)
     id             = Column(Integer, primary_key=True, index=True)
     name           = Column(Text, nullable=False)
     email          = Column(Text, unique=True, nullable=False, index=True)
+    student_number = Column(String(32), nullable=True)
     password_hash  = Column(Text, nullable=False)
     university     = Column(Text, default="Karabük Üniversitesi")
     department     = Column(Text, default="İlahiyat Fakültesi")
     year           = Column(Integer, default=1)
+    # Nullable for existing accounts and teachers; students choose it once.
+    class_section  = Column(String(1), CheckConstraint(
+        "class_section IN ('A', 'B', 'C', 'D')", name="ck_students_class_section"))
+    role           = Column(String(10), CheckConstraint(
+        "role IN ('student', 'teacher', 'admin')", name="ck_accounts_role"),
+        nullable=False, default="student", server_default="student")
+    is_active      = Column(Boolean, nullable=False, default=True, server_default="true")
+    token_version  = Column(Integer, nullable=False, default=0, server_default="0")
     language_pref  = Column(String(5), default="tr")
     created_at     = Column(DateTime, server_default=func.now())
     last_login     = Column(DateTime)
@@ -161,6 +172,24 @@ class Student(Base):
     answers        = relationship("ExerciseAnswer",  back_populates="student", cascade="all, delete")
     srs_cards      = relationship("SRSCard",         back_populates="student", cascade="all, delete")
     ai_sessions    = relationship("AISession",       back_populates="student", cascade="all, delete")
+
+
+class TeacherSection(Base):
+    """Multiple teachers per section; multiple sections per teacher."""
+    __tablename__ = "teacher_sections"
+    teacher_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)
+    class_section = Column(String(1), CheckConstraint(
+        "class_section IN ('A', 'B', 'C', 'D')", name="ck_teacher_sections_section"), primary_key=True)
+
+
+class AdminAudit(Base):
+    __tablename__ = "admin_audit"
+    id = Column(Integer, primary_key=True)
+    actor_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    target_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    action = Column(String(40), nullable=False)
+    details = Column(JSON, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
 
 
 # ─────────────────────────────────────────

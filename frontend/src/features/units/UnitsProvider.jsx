@@ -16,8 +16,8 @@ function rememberedUnitId() {
   }
 }
 
-export function UnitsProvider({ children }) {
-  const { data, loading, error, reload } = useApiData('units', () => api.get('/units').then(r => r.data))
+export function UnitsProvider({ children, active = true }) {
+  const { data, loading, error, reload } = useApiData(active ? 'units' : null, () => api.get('/units').then(r => r.data))
   const [selectedId, setSelectedId] = useState(rememberedUnitId)
 
   const units = data ?? NO_UNITS

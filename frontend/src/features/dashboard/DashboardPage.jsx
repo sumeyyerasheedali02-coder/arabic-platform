@@ -26,10 +26,12 @@ export default function DashboardPage() {
   const { units, selectUnit, loading: loadingUnits, error: unitsError, reload: reloadUnits } = useUnits()
   const { progress, loading: loadingProgress } = useProgress()
   const due = useApiData(token ? 'srs-due-count' : null, () => api.get('/me/srs/due').then(r => r.data.length))
+  const score = useApiData(token && student ? `score:${student.id}` : null,
+    () => api.get('/me/progress/summary').then(r => r.data.total_score))
 
   const dueCards    = due.data ?? 0
   const lessonsDone = completedLessons(progress).length
-  const totalScore  = progress.reduce((sum, p) => sum + (p.score || 0), 0)
+  const totalScore  = token ? score.data : 0
 
   if (loadingUnits || loadingProgress || due.loading) return <CenteredSpinner size={32} height={260} />
   if (unitsError && units.length === 0) return <ErrorState onRetry={reloadUnits} />
@@ -64,6 +66,7 @@ export default function DashboardPage() {
         <StatCard icon="📖" label="الوحدات المتاحة"  value={units.length} />
         <StatCard icon="✅" label="الدروس المكتملة"   value={lessonsDone} />
         <StatCard icon="⭐" label="مجموع النقاط"      value={totalScore} />
+        {score.error && <button onClick={score.reload}>إعادة تحميل النقاط</button>}
         <StatCard icon="🗂️" label="بطاقات للمراجعة"  value={dueCards}
           sub={dueCards > 0 ? 'تحتاج مراجعة اليوم' : 'لا توجد بطاقات اليوم'} />
       </div>

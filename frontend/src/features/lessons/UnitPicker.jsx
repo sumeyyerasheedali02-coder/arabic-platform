@@ -1,4 +1,4 @@
-/** The list of units beside the lessons (a horizontal, scrollable row on mobile). */
+/** Mobile unit chooser above the lessons; desktop uses the navy sidebar. */
 export default function UnitPicker({ units, selectedId, onSelect }) {
   return (
     <aside className="lessons-units" style={{ width: 200, flexShrink: 0 }}>

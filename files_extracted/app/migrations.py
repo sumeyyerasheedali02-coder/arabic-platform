@@ -8,18 +8,80 @@ Rules:
 - append to MIGRATIONS, never edit or reorder an entry that has shipped;
 - every statement must be valid on both SQLite and PostgreSQL;
 - a migration must be safe to run on a database that already has the change
-  (new databases get it from create_all first), hence IF NOT EXISTS.
+  (new databases get it from create_all first). Use IF NOT EXISTS where supported,
+  or inspect the schema before adding columns (SQLite has no ADD COLUMN IF NOT EXISTS).
 
 Applied migrations are recorded in the `schema_migrations` table. They run at
 application start and with `python -m tools.migrate`.
 """
 import logging
+from collections.abc import Awaitable, Callable
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
+from sqlalchemy.ext.asyncio import AsyncConnection
+
+from app.config import ADMIN_EMAIL, get_settings
 
 logger = logging.getLogger(__name__)
 
-MIGRATIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
+async def _add_student_class_section(conn: AsyncConnection) -> None:
+    columns = await conn.run_sync(lambda sync: inspect(sync).get_columns("students"))
+    if "class_section" not in {column["name"] for column in columns}:
+        await conn.execute(text(
+            "ALTER TABLE students ADD COLUMN class_section VARCHAR(1) "
+            "CONSTRAINT ck_students_class_section CHECK (class_section IN ('A', 'B', 'C', 'D'))"
+        ))
+
+
+MigrationAction = tuple[str, ...] | Callable[[AsyncConnection], Awaitable[None]]
+
+
+async def _add_staff_roles(conn: AsyncConnection) -> None:
+    columns = await conn.run_sync(lambda sync: inspect(sync).get_columns("students"))
+    names = {column["name"] for column in columns}
+    additions = {
+        "role": "VARCHAR(10) NOT NULL DEFAULT 'student' CONSTRAINT ck_accounts_role "
+                "CHECK (role IN ('student', 'teacher', 'admin'))",
+        "is_active": "BOOLEAN NOT NULL DEFAULT true",
+        "token_version": "INTEGER NOT NULL DEFAULT 0",
+    }
+    for name, definition in additions.items():
+        if name not in names:
+            await conn.execute(text(f"ALTER TABLE students ADD COLUMN {name} {definition}"))
+    # Import existing staff once. Future access is determined only by database roles.
+    for email in sorted(get_settings().teacher_emails | {ADMIN_EMAIL}):
+        role = "admin" if email == ADMIN_EMAIL else "teacher"
+        await conn.execute(text(
+            "UPDATE students SET role = :role WHERE id = "
+            "(SELECT MIN(id) FROM students WHERE LOWER(email) = :email) AND role = 'student'"
+        ), {"role": role, "email": email})
+        if role == "teacher":
+            # Teachers could see every student before sections existed; keep that
+            # until an administrator narrows it, instead of silently locking them out.
+            tables = await conn.run_sync(lambda sync: inspect(sync).get_table_names())
+            if "teacher_sections" in tables:
+                for section in ("A", "B", "C", "D"):
+                    await conn.execute(text(
+                        "INSERT INTO teacher_sections (teacher_id, class_section) "
+                        "SELECT id, CAST(:section AS VARCHAR(1)) FROM students "
+                        "WHERE LOWER(email) = :email AND role = 'teacher' "
+                        "AND NOT EXISTS (SELECT 1 FROM teacher_sections t "
+                        "WHERE t.teacher_id = students.id "
+                        "AND t.class_section = CAST(:section AS VARCHAR(1)))"
+                    ), {"section": section, "email": email})
+    await conn.execute(text(
+        "CREATE INDEX IF NOT EXISTS ix_accounts_role_section ON students (role, class_section)"))
+
+
+async def _add_student_number(conn: AsyncConnection) -> None:
+    columns = await conn.run_sync(lambda sync: inspect(sync).get_columns("students"))
+    if "student_number" not in {column["name"] for column in columns}:
+        await conn.execute(text("ALTER TABLE students ADD COLUMN student_number VARCHAR(32)"))
+    # NULL remains valid for staff and existing students; never invent numbers.
+    await conn.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_students_student_number ON students (student_number)"))
+
+MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     # Lookups by student were full table scans. Measured on SQLite with 300
     # students: the due-cards query 9.1 ms -> 0.05 ms, a card lookup
     # 18.5 ms -> 0.04 ms, a student's progress 0.75 ms -> 0.12 ms.
@@ -29,6 +91,9 @@ MIGRATIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
         "CREATE INDEX IF NOT EXISTS ix_student_progress_student_lesson "
         "ON student_progress (student_id, lesson_id)",
     )),
+    ("0002_student_class_section", _add_student_class_section),
+    ("0003_staff_roles", _add_staff_roles),
+    ("0004_student_number", _add_student_number),
 )
 
 _CREATE_LOG = text(
@@ -47,11 +112,14 @@ async def apply_migrations(conn) -> list[str]:
     """Run the migrations that are not recorded yet; returns their ids."""
     done = await applied_migrations(conn)
     newly_applied = []
-    for migration_id, statements in MIGRATIONS:
+    for migration_id, action in MIGRATIONS:
         if migration_id in done:
             continue
-        for statement in statements:
-            await conn.execute(text(statement))
+        if callable(action):
+            await action(conn)
+        else:
+            for statement in action:
+                await conn.execute(text(statement))
         await conn.execute(text("INSERT INTO schema_migrations (id) VALUES (:id)"), {"id": migration_id})
         newly_applied.append(migration_id)
         logger.info("Applied database migration %s", migration_id)

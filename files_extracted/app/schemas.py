@@ -1,15 +1,46 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-
 # ── Auth ──────────────────────────────────
-class StudentRegister(BaseModel):
+ClassSection = Literal["A", "B", "C", "D"]
+AccountRole = Literal["student", "teacher", "admin"]
+
+
+class StudentNumberSelection(BaseModel):
+    student_number: str = Field(min_length=1, max_length=32, pattern=r"^[0-9]+$")
+
+    @field_validator("student_number", mode="before")
+    @classmethod
+    def normalize_student_number(cls, value):
+        if not isinstance(value, str):
+            return value
+        return value.strip().translate(str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789"))
+
+
+class ClassSectionSelection(BaseModel):
+    class_section: ClassSection
+
+    @field_validator("class_section", mode="before")
+    @classmethod
+    def normalize_class_section(cls, value):
+        return value.strip().upper() if isinstance(value, str) else value
+
+
+class StudentProfileCompletion(StudentNumberSelection):
+    class_section: Optional[ClassSection] = None
+
+    @field_validator("class_section", mode="before")
+    @classmethod
+    def normalize_class_section(cls, value):
+        return ClassSectionSelection.normalize_class_section(value)
+
+
+class StudentRegister(ClassSectionSelection, StudentNumberSelection):
     name:     str
     email:    EmailStr
     password: str = Field(min_length=6)
-    year:     Optional[int] = 1
 
     @field_validator("password")
     @classmethod
@@ -30,6 +61,10 @@ class Token(BaseModel):
     student_id:   int
     name:         str
     is_teacher:   bool = False
+    class_section: Optional[ClassSection] = None
+    role: AccountRole = "student"
+    is_admin: bool = False
+    student_number: Optional[str] = None
 
 class EmailCheckResponse(BaseModel):
     exists: bool
@@ -39,6 +74,55 @@ class SessionInfo(BaseModel):
     student_id: int
     name:       str
     is_teacher: bool
+    class_section: Optional[ClassSection] = None
+    role: AccountRole = "student"
+    is_admin: bool = False
+    student_number: Optional[str] = None
+
+
+class TeacherCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
+    email: EmailStr
+    password: str = Field(min_length=10)
+    sections: List[ClassSection] = Field(min_length=1, max_length=4)
+
+    @field_validator("password")
+    @classmethod
+    def password_fits_bcrypt(cls, value):
+        return StudentRegister.password_fits_bcrypt(value)
+
+    @field_validator("name")
+    @classmethod
+    def nonempty_name(cls, value):
+        value = value.strip()
+        if not value:
+            raise ValueError("الاسم مطلوب")
+        return value
+
+
+class TeacherUpdate(BaseModel):
+    sections: List[ClassSection] = Field(max_length=4)
+    is_active: bool
+    password: Optional[str] = Field(default=None, min_length=10)
+
+    @field_validator("password")
+    @classmethod
+    def password_fits_bcrypt(cls, value):
+        return StudentRegister.password_fits_bcrypt(value) if value is not None else value
+
+
+class TeacherInfo(BaseModel):
+    id: int
+    name: str
+    email: str
+    sections: List[ClassSection]
+    is_active: bool
+
+
+class SectionInfo(BaseModel):
+    class_section: ClassSection
+    students_count: int
+    teachers_count: int
 
 
 # ── Vocabulary ────────────────────────────
@@ -186,9 +270,15 @@ class StudentSummary(BaseModel):
     student_id:      int
     name:            str
     email:           str
+    student_number:  Optional[str] = None
+    class_section:   Optional[ClassSection] = None
     total_score:     int
     lessons_done:    int
     last_active:     Optional[datetime]
+    completion_pct: float = 0
+    answers_count: int = 0
+    correct_answers: int = 0
+    accuracy_pct: Optional[float] = None
 
 class UnitStats(BaseModel):
     unit_number:    int

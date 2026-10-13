@@ -9,7 +9,7 @@ const NO_PROGRESS = []
 export function ProgressProvider({ children }) {
   const { student, token } = useAuth()
   // Keyed by student so one account never sees another account's rows
-  const key = token && student ? `progress:${student.id}` : null
+  const key = token && student && !student.is_teacher && !student.is_admin ? `progress:${student.id}` : null
   const { data, loading, error, reload } = useApiData(key, () => api.get('/me/progress').then(r => r.data))
 
   const value = useMemo(

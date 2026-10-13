@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { staffHome, staffPageTitle } from './staffNavigation'
 
 const NAV = [
   { to: '/lessons',   label: 'الدروس' },
@@ -8,13 +9,12 @@ const NAV = [
   { to: '/chat',      label: 'محادثة AI' },
   { to: '/dashboard', label: 'تقدمي' },
 ]
-// Only the teacher sees the students overview page
-const TEACHER_NAV = { to: '/teacher', label: 'لوحة الأستاذ' }
 
 export default function Header({ onMenuClick }) {
   const { student, logout } = useAuth()
   const location  = useLocation()
   const navigate  = useNavigate()
+  const isStaff = student?.is_teacher || student?.is_admin
 
   const handleLogout = () => { logout(); navigate('/login') }
 
@@ -43,8 +43,11 @@ export default function Header({ onMenuClick }) {
       <div className="hdr-divider" style={{ width: 1, height: 28, background: 'var(--border)', flexShrink: 0 }} />
 
       {/* Nav links */}
-      <nav className="hdr-nav" style={{ display: 'flex', gap: 2, flex: 1 }}>
-        {(student?.is_teacher ? [...NAV, TEACHER_NAV] : NAV).map(({ to, label }) => {
+      {isStaff ? <div className="staff-header-context">
+        <strong>{staffPageTitle(location.pathname, student.is_admin)}</strong>
+        {location.pathname !== staffHome(student) && <Link to={staffHome(student)}>الرئيسية</Link>}
+      </div> : <nav className="hdr-nav" style={{ display: 'flex', gap: 2, flex: 1 }}>
+        {NAV.map(({ to, label }) => {
           const active = location.pathname === to || (to === '/lessons' && location.pathname.startsWith('/lessons'))
           return (
             <Link
@@ -61,7 +64,7 @@ export default function Header({ onMenuClick }) {
             </Link>
           )
         })}
-      </nav>
+      </nav>}
 
       {/* User info + logout */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
@@ -69,7 +72,8 @@ export default function Header({ onMenuClick }) {
           <>
             <div className="hdr-user-text" style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--text)' }}>{student.name}</div>
-              <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>İlahiyat Fakültesi</div>
+              <div style={{ fontSize: 9.5, color: 'var(--muted)' }}>{student.is_admin ? 'مدير المنصة'
+                : student.is_teacher ? 'أستاذ' : 'İlahiyat Fakültesi'}</div>
             </div>
             <div style={{
               width: 34, height: 34, borderRadius: '50%',

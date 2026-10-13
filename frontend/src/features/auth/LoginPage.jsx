@@ -4,6 +4,9 @@ import api from '../../api/client'
 import BrandMark from '../../components/BrandMark'
 import { useAuth } from '../../auth/useAuth'
 import CardHeading from './CardHeading'
+import ClassSectionField from './ClassSectionField'
+import StudentNumberField from './StudentNumberField'
+import { isStudentNumber, normalizeStudentNumber } from './studentNumber'
 import HeroPanel from './HeroPanel'
 import LanguageSwitch from './LanguageSwitch'
 import { EMAIL_PATTERN, LOGIN_FAILED, LOGIN_TEXTS, MIN_PASSWORD_LENGTH, PASSWORD_TOO_SHORT } from './texts'
@@ -35,7 +38,8 @@ export default function LoginPage() {
   const [name, setName]           = useState('')
   const [password, setPassword]   = useState('')
   const [showPwd, setShowPwd]     = useState(false)
-  const [year, setYear]           = useState(1)
+  const [classSection, setClassSection] = useState('')
+  const [studentNumber, setStudentNumber] = useState('')
   const [error, setError]         = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [lang, setLang] = useState('ar')
@@ -50,6 +54,12 @@ export default function LoginPage() {
 
   const handleEmailBlur = async () => {
     const val = email.trim()
+    if (isStudentNumber(val)) {
+      setEmailState('existing')
+      setError('')
+      setTimeout(() => passwordRef.current?.focus(), 80)
+      return
+    }
     if (!val || !EMAIL_PATTERN.test(val)) return
     setEmailState('checking')
     setError('')
@@ -70,8 +80,8 @@ export default function LoginPage() {
     e.preventDefault()
     if (emailState === 'checking') return
     if (emailState === 'idle') {
-      if (!EMAIL_PATTERN.test(email.trim())) {
-        setError(t.invalidEmail)
+      if (!EMAIL_PATTERN.test(email.trim()) && !isStudentNumber(email)) {
+        setError(t.invalidIdentifier)
         return
       }
       await handleEmailBlur()
@@ -88,18 +98,31 @@ export default function LoginPage() {
       if (emailState === 'existing') {
         // The login endpoint is an OAuth2 password form, not JSON
         const params = new URLSearchParams()
-        params.append('username', email.trim())
+        params.append('username', isStudentNumber(email) ? normalizeStudentNumber(email) : email.trim())
         params.append('password', password)
         res = await api.post('/auth/login', params, {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         })
       } else {
         res = await api.post('/auth/register', {
-          name, email: email.trim(), password, year: Number(year),
+          name, email: email.trim(), password, class_section: classSection, student_number: studentNumber,
         })
       }
-      login(res.data.access_token, { id: res.data.student_id, name: res.data.name, is_teacher: !!res.data.is_teacher })
-      navigate('/lessons')
+      // Older backends can ignore newly required profile fields during signup.
+      // Stop clearly instead of navigating to a profile endpoint they do not have.
+      if (!Object.hasOwn(res.data, 'class_section') || !Object.hasOwn(res.data, 'student_number')) {
+        if (emailState === 'new') setEmailState('existing')
+        setError(t.profileServiceUnavailable)
+        return
+      }
+      login(res.data.access_token, {
+        id: res.data.student_id, name: res.data.name,
+        is_teacher: !!res.data.is_teacher, class_section: res.data.class_section ?? null,
+        role: res.data.role, is_admin: !!res.data.is_admin,
+        student_number: res.data.student_number ?? null,
+      })
+      navigate(res.data.is_admin ? '/admin' : res.data.is_teacher ? '/teacher'
+        : !res.data.class_section || !res.data.student_number ? '/complete-profile' : '/lessons')
     } catch (err) {
       const d = err.response?.data?.detail
       setError(typeof d === 'string' ? d : LOGIN_FAILED)
@@ -161,12 +184,12 @@ export default function LoginPage() {
 
               {/* Email */}
               <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>{t.email}</label>
+                <label htmlFor="login-identifier" style={labelStyle}>{emailState === 'new' ? t.email : t.loginIdentifier}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ ...fieldIcon, color: 'var(--aq-text-muted)', fontSize: 16, pointerEvents: 'none' }}>✉</span>
-                  <input type="email" value={email}
+                  <input id="login-identifier" type="text" value={email} autoComplete="username"
                     onChange={e => { setEmail(e.target.value); if (emailState !== 'idle') resetEmail() }}
-                    onBlur={handleEmailBlur} required placeholder="name@karabuk.edu.tr" dir="ltr"
+                    onBlur={handleEmailBlur} required placeholder={t.identifierPlaceholder} dir="ltr"
                     style={{
                       ...inputStyle, paddingLeft: 42,
                       borderColor: emailState === 'existing' ? '#86EFAC' : emailState === 'new' ? '#93C5FD' : 'var(--aq-border)',
@@ -208,15 +231,13 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Year (new) */}
+              {/* Preparatory class section (new) */}
               {emailState === 'new' && (
-                <div style={{ marginBottom: 18, animation: 'aq-fade-in .3s ease-out' }}>
-                  <label style={labelStyle}>{t.year}</label>
-                  <select value={year} onChange={e => setYear(e.target.value)}
-                    style={{ ...inputStyle, cursor: 'pointer', appearance: 'auto' }}>
-                    {[1,2,3,4].map(y => <option key={y} value={y}>السنة {y}</option>)}
-                  </select>
-                </div>
+                <>
+                  <StudentNumberField value={studentNumber}
+                    onChange={value => { setStudentNumber(value); setError('') }} t={t} />
+                  <ClassSectionField value={classSection} onChange={setClassSection} t={t} />
+                </>
               )}
 
               {/* Error */}

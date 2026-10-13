@@ -1,9 +1,9 @@
 """Provision and review teacher accounts.
 
-Teacher rights belong to accounts whose e-mail is listed in TEACHER_EMAILS.
-Those addresses cannot be registered through the public sign-up form (the
-platform does not verify e-mail ownership), so the account is created here by
-whoever operates the server.
+Rights belong to the database role, not to the e-mail allowlist.
+Normal account creation and section assignment happen in the admin dashboard.
+This legacy recovery tool can provision an allowlisted address with the teacher
+role, but an administrator must still assign its sections before it sees students.
 
     python -m tools.teacher_accounts list
     python -m tools.teacher_accounts create --email teacher@karabuk.edu.tr --name "Ad Soyad"
@@ -53,18 +53,18 @@ async def _accounts_for(db, email: str) -> list[Student]:
 
 
 async def list_accounts() -> int:
-    if not TEACHER_EMAILS:
-        print("TEACHER_EMAILS is empty: no account has teacher rights.")
-        return 0
     await init_db()
     problems = 0
     async with AsyncSessionLocal() as db:
-        for email in sorted(TEACHER_EMAILS):
+        actual = (await db.execute(
+            select(Student.email).where(Student.role == "teacher"))).scalars().all()
+        for email in sorted(set(actual)):
             accounts = await _accounts_for(db, email)
             if not accounts:
                 print(f"{email}: no account yet (create one with the `create` command)")
             for account in accounts:
                 print(f"{email}: id={account.id} stored_as={account.email} name={account.name!r} "
+                      f"role={account.role} active={account.is_active} "
                       f"created={account.created_at} last_login={account.last_login}")
             if len(accounts) > 1:
                 problems += 1
@@ -83,7 +83,7 @@ async def create_account(email: str, name: str, password: str) -> int:
     async with AsyncSessionLocal() as db:
         if await _accounts_for(db, email):
             raise SystemExit(f"an account for {email} already exists; use `set-password` instead")
-        db.add(Student(name=name, email=email, password_hash=hash_password(password)))
+        db.add(Student(name=name, email=email, password_hash=hash_password(password), role="teacher"))
         await db.commit()
     print(f"Teacher account created for {email}.")
     return 0
@@ -91,14 +91,15 @@ async def create_account(email: str, name: str, password: str) -> int:
 
 async def set_password(email: str, password: str) -> int:
     email = email.strip().lower()
-    if not is_teacher_email(email):
-        raise SystemExit(f"{email} is not listed in TEACHER_EMAILS")
     await init_db()
     async with AsyncSessionLocal() as db:
         accounts = await _accounts_for(db, email)
         if not accounts:
             raise SystemExit(f"no account for {email}; use `create` instead")
+        if accounts[0].role != "teacher":
+            raise SystemExit(f"{email} is not a teacher account")
         accounts[0].password_hash = hash_password(password)
+        accounts[0].token_version += 1
         await db.commit()
     print(f"Password updated for {email} (account id {accounts[0].id}).")
     return 0

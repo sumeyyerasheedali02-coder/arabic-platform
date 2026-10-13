@@ -20,6 +20,8 @@ ignore = [
 "content/**/*.py" = ["E501"]
 # The suite sets up the environment before importing the application.
 "tests/_app.py" = ["E402"]
+# Test requests and fixtures read better on one line.
+"tests/*.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "content", "tools", "tests", "main"]

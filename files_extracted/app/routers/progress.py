@@ -7,13 +7,23 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Exercise, Lesson, StudentProgress
+from app.models import Exercise, ExerciseAnswer, Lesson, StudentProgress
 from app.schemas import ProgressOut
 from app.security import get_current_student
 
 router = APIRouter(prefix="/api/me/progress", tags=["progress"])
 
 ProgressStatus = Literal["not_started", "in_progress", "completed"]
+
+
+@router.get("/summary")
+async def progress_summary(
+    student_id: int = Depends(get_current_student), db: AsyncSession = Depends(get_db),
+):
+    best = select(func.max(ExerciseAnswer.points_earned).label("points")).where(
+        ExerciseAnswer.student_id == student_id).group_by(ExerciseAnswer.exercise_id).subquery()
+    total = (await db.execute(select(func.coalesce(func.sum(best.c.points), 0)))).scalar()
+    return {"total_score": total}
 
 
 @router.get("", response_model=List[ProgressOut])

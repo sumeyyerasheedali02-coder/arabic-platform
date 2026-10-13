@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/client";
 import { useApiData } from "../../api/useApiData";
 import { useUnits } from "../units/useUnits";
+import { useAuth } from "../../auth/useAuth";
 import { DialogueScript } from "./DialogueViews";
 import GrammarRules from "./GrammarRules";
 
@@ -27,6 +28,7 @@ async function loadLesson(lessonId) {
 export default function LessonDetailPage() {
   const { lessonId } = useParams();
   const navigate = useNavigate();
+  const { student } = useAuth();
   const { units, selectUnit } = useUnits();
   const { data, loading } = useApiData(`lesson:${lessonId}`, () => loadLesson(lessonId));
   const [activeTab, setActiveTab] = useState("vocabulary");
@@ -45,7 +47,8 @@ export default function LessonDetailPage() {
   // Back always leads to the lessons of this lesson's unit, also when the page
   // was opened from a link and there is no history to go back to.
   const unit = data ? units.find(u => u.id === data.lesson.unit_id) : null;
-  const goBack = () => { if (unit) selectUnit(unit); navigate("/lessons"); };
+  const goBack = () => { if (unit) selectUnit(unit); navigate(
+    student?.is_teacher || student?.is_admin ? "/content" : "/lessons"); };
 
   if (loading) return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",color:"#888",fontFamily:"sans-serif"}}>
@@ -120,8 +123,11 @@ export default function LessonDetailPage() {
         )}
         {activeTab==="exercises" && (
           <div style={{textAlign:"center",padding:"3rem",color:"#aaa"}}>
-            <div style={{fontSize:"40px"}}>🚧</div>
-            <p>التمارين قيد التطوير</p>
+            {student?.is_teacher || student?.is_admin ? <button
+              onClick={() => { if (unit) selectUnit(unit); navigate("/content?tab=exercises"); }}
+              style={{padding:"10px 18px",borderRadius:8,border:"1px solid #e8e0d0",background:"#fff",color:"#1a2744",cursor:"pointer"}}>
+              معاينة تمارين الوحدة
+            </button> : <><div style={{fontSize:"40px"}}>🚧</div><p>التمارين قيد التطوير</p></>}
           </div>
         )}
       </main>

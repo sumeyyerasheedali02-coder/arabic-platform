@@ -1,8 +1,10 @@
 import { Suspense, useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useAuth } from '../auth/useAuth'
 import { CenteredSpinner } from '../components/Spinner'
 import { ProgressProvider } from '../features/progress/ProgressProvider'
 import { UnitsProvider } from '../features/units/UnitsProvider'
+import StaffProvider from '../features/staff/StaffProvider'
 import Header from './Header'
 import Sidebar from './Sidebar'
 
@@ -12,6 +14,8 @@ import Sidebar from './Sidebar'
  * it is loaded once and not again on every navigation.
  */
 export default function AppLayout() {
+  const { student, token, loading } = useAuth()
+  const isStaff = student?.is_teacher || student?.is_admin
   // Mobile: the sidebar is a slide-in drawer opened from the header menu button
   const [menuOpen, setMenuOpen] = useState(false)
   const location = useLocation()
@@ -20,8 +24,13 @@ export default function AppLayout() {
     setMenuPath(location.pathname)
     setMenuOpen(false)
   }
+  if (loading) return <CenteredSpinner size={36} minHeight="100dvh" />
+  if (token && !isStaff && (!student?.class_section || !student?.student_number)) {
+    return <Navigate to="/complete-profile" replace />
+  }
   return (
-    <UnitsProvider>
+    <StaffProvider>
+    <UnitsProvider active={!isStaff || location.pathname.startsWith('/content')}>
       <ProgressProvider>
         <div className="app-grid">
           <Sidebar open={menuOpen} onNavigate={() => setMenuOpen(false)} />
@@ -36,5 +45,6 @@ export default function AppLayout() {
         </div>
       </ProgressProvider>
     </UnitsProvider>
+    </StaffProvider>
   )
 }

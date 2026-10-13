@@ -42,8 +42,8 @@ async def test_unit_completion_never_exceeds_100_percent(client, register, teach
         await client.post("/api/me/progress/update", headers=student.headers, params={
             "unit_id": content.unit_a, "lesson_id": lesson, "score": 5, "status": "completed"})
     stats = (await client.get("/api/teacher/units/stats", headers=staff.headers)).json()
-    # Two accounts (this student and the teacher), three lessons: 3 of 6 lesson completions.
-    assert stats[0]["completion_pct"] == 50.0
+    # Only students count in the denominator: 3 of 3 lesson completions.
+    assert stats[0]["completion_pct"] == 100.0
     assert stats[1]["completion_pct"] == 0
 
     other = await register()
@@ -51,7 +51,7 @@ async def test_unit_completion_never_exceeds_100_percent(client, register, teach
         await client.post("/api/me/progress/update", headers=other.headers, params={
             "unit_id": content.unit_a, "lesson_id": lesson, "score": 5, "status": "completed"})
     stats = (await client.get("/api/teacher/units/stats", headers=staff.headers)).json()
-    assert stats[0]["completion_pct"] == 55.6       # 5 of 9
+    assert stats[0]["completion_pct"] == 83.3       # 5 of 6
     assert stats[0]["avg_score"] == 5.0
 
 

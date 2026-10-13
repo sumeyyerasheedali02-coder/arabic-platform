@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/client'
@@ -220,6 +220,8 @@ function VocabularyTab({ words }) {
  */
 export default function LessonPanel({ lesson, unitVocab, onClose }) {
   const [tab, setTab] = useState(() => defaultTab(lesson))
+  const [closing, setClosing] = useState(false)
+  const requestClose = useCallback(() => setClosing(true), [])
   const query = useApiData(
     hasDialogues(lesson) ? `dialogues:${lesson.id}` : null,
     () => api.get(`/lessons/${lesson.id}/dialogues`).then(r => r.data),
@@ -238,15 +240,39 @@ export default function LessonPanel({ lesson, unitVocab, onClose }) {
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        requestClose()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [requestClose])
+
+  // Keep the panel mounted until its exit animation finishes. The timer also
+  // closes it if animations are disabled or an animation-end event is missed.
+  useEffect(() => {
+    if (!closing) return undefined
+    const timer = window.setTimeout(onClose, 240)
+    return () => window.clearTimeout(timer)
+  }, [closing, onClose])
+
   // The ×, "العودة إلى الدروس" and a click outside all close the panel and
   // leave the student on the lessons page they opened it from.
   // Rendered into <body> so no ancestor layout can clip or offset it
   return createPortal(
-    <div className="lesson-panel-overlay">
-      <div className="lesson-panel-backdrop" onClick={onClose} />
+    <div className={`lesson-panel-overlay${closing ? ' is-closing' : ''}`}>
+      <div className="lesson-panel-backdrop" onClick={requestClose} />
 
-      <div className="lesson-panel">
-        <PanelHeader lesson={lesson} onBack={onClose} />
+      <div
+        className="lesson-panel"
+        onAnimationEnd={(event) => {
+          if (closing && event.target === event.currentTarget) onClose()
+        }}
+      >
+        <PanelHeader lesson={lesson} onBack={requestClose} />
         <PanelTabs active={tab} onChange={setTab} />
 
         <div className="lesson-panel-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: 20 }}>

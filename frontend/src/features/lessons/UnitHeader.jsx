@@ -1,18 +1,18 @@
 import { Link } from 'react-router-dom'
 
 /** Navy banner with the unit title and the "add to review" action. */
-export default function UnitHeader({ unit, canSave, message, onAddToReview }) {
+export default function UnitHeader({ unit, canSave, message, onAddToReview, preview = false }) {
   return (
-    <div style={{
+    <div className="unit-header" style={{
       background: 'var(--navy)', borderRadius: 14,
-      padding: '18px 22px', marginBottom: 20, gap: 12, flexWrap: 'wrap',
-      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+      padding: '14px 20px', marginBottom: 16, gap: 12, flexWrap: 'wrap',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     }}>
       <div>
         <div style={{ fontSize: 10, color: 'rgba(201,168,76,.7)', letterSpacing: '.06em', marginBottom: 4 }}>
           الوحدة {unit.unit_number}
         </div>
-        <div style={{ fontFamily: "'Amiri', serif", fontSize: 20, color: '#fff', marginBottom: 2 }}>
+        <div style={{ fontFamily: "'Amiri', serif", fontSize: 20, lineHeight: 1.35, color: '#fff', marginBottom: 2 }}>
           {unit.title_ar}
         </div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)' }}>{unit.title_tr}</div>
@@ -34,7 +34,7 @@ export default function UnitHeader({ unit, canSave, message, onAddToReview }) {
         >
           + أضف للمراجعة
         </button>
-      ) : (
+      ) : !preview && (
         <Link
           to="/login"
           style={{

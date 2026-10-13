@@ -137,15 +137,19 @@ def new_email():
 @pytest.fixture
 def register(client, new_email):
     """Register a student through the API; returns auth headers plus identity."""
-    async def _register(email=None, name="Ayşe Yılmaz", password="secret123", year=1):
+    async def _register(email=None, name="Ayşe Yılmaz", password="secret123", class_section="A",
+                        student_number=None):
         email = email or new_email()
+        student_number = student_number if student_number is not None else f"00{next(_counter):08d}"
         res = await client.post("/api/auth/register", json={
-            "name": name, "email": email, "password": password, "year": year})
+            "name": name, "email": email, "password": password, "class_section": class_section,
+            "student_number": student_number})
         assert res.status_code == 200, res.text
         body = res.json()
         return SimpleNamespace(
             headers={"Authorization": f"Bearer {body['access_token']}"},
-            id=body["student_id"], email=email, password=password, body=body)
+            id=body["student_id"], email=email, password=password, body=body,
+            student_number=body["student_number"])
     return _register
 
 
@@ -159,19 +163,38 @@ def login(client):
 @pytest.fixture
 def teacher(login):
     """Provision the teacher account directly (not through public registration)."""
-    async def _teacher(password="teacher-pass-1"):
+    async def _teacher(password="teacher-pass-1", sections=("A", "B", "C", "D"), email=None):
         async with AsyncSessionLocal() as session:
-            account = models.Student(name="Öğretmen", email=_app.TEACHER_EMAIL,
-                                     password_hash=hash_password(password))
+            account = models.Student(name="Öğretmen", email=email or _app.TEACHER_EMAIL,
+                                     password_hash=hash_password(password), role="teacher")
             session.add(account)
+            await session.flush()
+            session.add_all([models.TeacherSection(teacher_id=account.id, class_section=s)
+                             for s in sections])
             await session.commit()
             account_id = account.id
-        res = await login(_app.TEACHER_EMAIL, password)
+        res = await login(email or _app.TEACHER_EMAIL, password)
         assert res.status_code == 200, res.text
         body = res.json()
         return SimpleNamespace(
             headers={"Authorization": f"Bearer {body['access_token']}"}, id=account_id, body=body)
     return _teacher
+
+
+@pytest.fixture
+def admin(login):
+    async def _admin():
+        async with AsyncSessionLocal() as session:
+            account = models.Student(name="Malek", email="malekco721@gmail.com",
+                                     password_hash=hash_password("admin-test-pass"), role="admin")
+            session.add(account)
+            await session.commit()
+        res = await login(account.email, "admin-test-pass")
+        assert res.status_code == 200, res.text
+        body = res.json()
+        return SimpleNamespace(id=account.id, headers={"Authorization": f"Bearer {body['access_token']}"},
+                               body=body)
+    return _admin
 
 
 class FakeAI:

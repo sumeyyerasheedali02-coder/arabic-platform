@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./arabic_platform.db"
 DEFAULT_CORS_ORIGINS = "https://arabic-platform-flame.vercel.app,http://localhost:5173"
 DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite"
+ADMIN_EMAIL = "malekco721@gmail.com"
 
 # Values that are public knowledge (old code default, .env.example placeholder).
 # Anyone can forge a login token for any account if one of them signs the tokens.

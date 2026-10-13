@@ -5,7 +5,7 @@ from ._app import AsyncSessionLocal, models
 async def _add_students(count, content, prefix):
     async with AsyncSessionLocal() as db:
         students = [models.Student(name=f"{prefix}{i}", email=f"{prefix}{i}@example.com",
-                                   password_hash="not-a-real-hash") for i in range(count)]
+                                   password_hash="not-a-real-hash", class_section="A") for i in range(count)]
         db.add_all(students)
         await db.flush()
         for s in students:
@@ -32,7 +32,7 @@ async def test_teacher_reports_use_a_fixed_number_of_queries(client, teacher, co
         assert counts[("many", path)] <= 6, counts
 
     rows = (await client.get("/api/teacher/students", headers=staff.headers)).json()
-    assert len(rows) == 29                                  # 28 students + the teacher
+    assert len(rows) == 28                                  # teachers are excluded
     assert sum(row["total_score"] for row in rows) == 280 and sum(row["lessons_done"] for row in rows) == 28
 
 
