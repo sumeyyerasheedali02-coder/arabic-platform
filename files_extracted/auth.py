@@ -6,13 +6,43 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import logging
 import os
+import secrets
 from dotenv import load_dotenv
 from database import get_db, Student
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-this-secret")
+logger = logging.getLogger(__name__)
+
+# Values that are public knowledge (old code default, .env.example placeholder).
+# Anyone can forge a login token for any account if one of them signs the tokens.
+INSECURE_SECRET_KEYS = {"", "change-this-secret", "your-secret-key-here"}
+
+
+def load_secret_key() -> str:
+    """Return the JWT signing key, never a publicly known one.
+
+    Without a real SECRET_KEY the process signs with a random key that lives
+    only in memory: the API stays usable and safe, but every restart logs
+    everyone out. Set ENVIRONMENT=production to refuse to start instead.
+    """
+    key = os.getenv("SECRET_KEY", "").strip()
+    if key not in INSECURE_SECRET_KEYS:
+        return key
+    if os.getenv("ENVIRONMENT", "").strip().lower() == "production":
+        raise RuntimeError(
+            "SECRET_KEY is missing or is a placeholder. Generate one with "
+            "`python -c \"import secrets; print(secrets.token_urlsafe(48))\"` "
+            "and set it in the environment.")
+    logger.warning(
+        "SECRET_KEY is missing or is a placeholder: using a temporary random key. "
+        "All logins become invalid when the server restarts. Set SECRET_KEY to fix this.")
+    return secrets.token_urlsafe(48)
+
+
+SECRET_KEY = load_secret_key()
 ALGORITHM  = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 10080))
 

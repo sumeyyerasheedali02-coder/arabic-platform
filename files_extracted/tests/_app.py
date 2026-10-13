@@ -26,11 +26,11 @@ os.environ["ALGORITHM"] = "HS256"
 
 import database as models  # noqa: E402
 import main as main_module  # noqa: E402
-from auth import hash_password  # noqa: E402
+from auth import hash_password, load_secret_key  # noqa: E402
 from database import AsyncSessionLocal, Base, engine, init_db  # noqa: E402
 from main import app  # noqa: E402
 
 __all__ = [
     "AsyncSessionLocal", "Base", "TEACHER_EMAIL", "TEST_DB_PATH", "TEST_SECRET",
-    "app", "engine", "hash_password", "init_db", "main_module", "models",
+    "app", "engine", "hash_password", "init_db", "load_secret_key", "main_module", "models",
 ]
