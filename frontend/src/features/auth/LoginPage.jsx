@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useLocation, useNavigate, Link } from 'react-router-dom'
 import api from '../../api/client'
 import logo from '../../assets/logo.png'
 import { useAuth } from '../../auth/useAuth'
@@ -42,6 +42,8 @@ export default function LoginPage() {
   const passwordRef               = useRef(null)
   const { login }                 = useAuth()
   const navigate                  = useNavigate()
+  // Set when the server rejected a stored login and sent the student here
+  const sessionExpired            = useLocation().state?.sessionExpired === true
 
   const t = LOGIN_TEXTS[lang]
   const busy = submitting || emailState === 'checking'
@@ -219,9 +221,9 @@ export default function LoginPage() {
               )}
 
               {/* Error */}
-              {error && (
-                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', borderRadius: 14, padding: '12px 16px', fontSize: 13, marginBottom: 12, fontWeight: 500 }}>
-                  {error}
+              {(error || sessionExpired) && (
+                <div role="alert" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', borderRadius: 14, padding: '12px 16px', fontSize: 13, marginBottom: 12, fontWeight: 500 }}>
+                  {error || t.sessionExpired}
                 </div>
               )}
 

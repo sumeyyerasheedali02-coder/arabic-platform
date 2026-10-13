@@ -29,7 +29,11 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
+    try:
+        return bcrypt.checkpw(plain.encode(), hashed.encode())
+    except ValueError:
+        # A stored hash that is not bcrypt, or (bcrypt >= 5) a password over 72 bytes
+        return False
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
@@ -40,11 +44,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
-async def get_current_student(
+async def get_current_account(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
-) -> int:
-    """Return the id of the logged-in student, or answer 401."""
+) -> Student:
+    """Return the account the token belongs to, or answer 401.
+
+    The token must be valid, unexpired, carry a numeric subject, and that
+    account must still exist.
+    """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="بيانات الاعتماد غير صالحة",
@@ -52,26 +60,27 @@ async def get_current_student(
     )
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        sub = payload.get("sub")
-        if sub is None:
-            raise credentials_exception
         # python-jose requires `sub` to be a string; ids are stored as str(id).
-        student_id: int = int(sub)
-    except JWTError:
+        student_id = int(payload.get("sub"))
+    except (JWTError, TypeError, ValueError):
         raise credentials_exception
-    return student_id
+
+    student = (await db.execute(select(Student).where(Student.id == student_id))).scalar_one_or_none()
+    if student is None:
+        raise credentials_exception
+    return student
 
 
-async def get_current_teacher(
-    student_id: int = Depends(get_current_student),
-    db: AsyncSession = Depends(get_db),
-) -> int:
+async def get_current_student(account: Student = Depends(get_current_account)) -> int:
+    """The id of the logged-in student (401 when not logged in)."""
+    return account.id
+
+
+async def get_current_teacher(account: Student = Depends(get_current_account)) -> int:
     """Like get_current_student, but answers 403 unless the account is a teacher."""
-    result = await db.execute(select(Student).where(Student.id == student_id))
-    student = result.scalar_one_or_none()
-    if not student or not is_teacher_email(student.email):
+    if not is_teacher_email(account.email):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="هذه الصفحة مخصصة للأستاذ فقط",
         )
-    return student_id
+    return account.id

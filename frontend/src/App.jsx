@@ -15,21 +15,26 @@ import ChatPage from './features/chat/ChatPage'
 // Students are sent to their own progress page; only the teacher reaches /teacher
 // (the backend enforces this too — this only avoids showing an empty page)
 function TeacherOnly({ children }) {
-  const { student, loading } = useAuth()
-  if (loading) return null
+  const { student } = useAuth()
   return student?.is_teacher ? children : <Navigate to="/dashboard" replace />
+}
+
+// "/" opens the lessons for a logged-in student and the landing page for everyone else
+function Home() {
+  const { token } = useAuth()
+  return <Navigate to={token ? '/lessons' : '/landing'} replace />
 }
 
 // HashRouter: the static host serves index.html only at the root, so the route
 // lives after the # and survives a page reload.
 export default function App() {
   return (
-    <AuthProvider>
-      <HashRouter>
+    <HashRouter>
+      <AuthProvider>
         <Routes>
           <Route path="/landing" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/" element={localStorage.getItem('token') ? <Navigate to="/lessons" replace /> : <Navigate to="/landing" replace />} />
+          <Route path="/" element={<Home />} />
           {/* Pages inside the app shell. Guests may open all of them except /teacher. */}
           <Route element={<AppLayout />}>
             <Route path="/lessons"           element={<LessonsPage />} />
@@ -42,7 +47,7 @@ export default function App() {
           </Route>
           <Route path="*"                  element={<Navigate to="/" replace />} />
         </Routes>
-      </HashRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </HashRouter>
   )
 }

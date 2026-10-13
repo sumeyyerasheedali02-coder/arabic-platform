@@ -21,6 +21,7 @@ export const LOGIN_TEXTS = {
     welcome: 'مرحباً بعودتك!',
     enterPwd: 'أدخل كلمة المرور',
     footer: 'جامعة كارابوك — كلية الإلهيات',
+    sessionExpired: 'انتهت صلاحية الجلسة. سجّل الدخول من جديد للمتابعة.',
   },
   tr: {
     title: 'Giriş Yap',
@@ -43,12 +44,11 @@ export const LOGIN_TEXTS = {
     welcome: 'Tekrar hoş geldin!',
     enterPwd: 'Şifrenizi girin',
     footer: 'Karabük Üniversitesi — İlahiyat Fakültesi',
+    sessionExpired: 'Oturumunuzun süresi doldu. Devam etmek için tekrar giriş yapın.',
   },
 }
 
-// "أدخل كلمة مرور من 6 أحرف على الأقل"
 export const PASSWORD_TOO_SHORT = 'أدخل كلمة مرور من 6 أحرف على الأقل'
-// "تأكد من البريد وكلمة المرور (6 أحرف على الأقل)"
 export const LOGIN_FAILED = 'تأكد من البريد وكلمة المرور (6 أحرف على الأقل)'
 
 export const MIN_PASSWORD_LENGTH = 6

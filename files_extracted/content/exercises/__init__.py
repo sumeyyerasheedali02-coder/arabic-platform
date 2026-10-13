@@ -29,7 +29,7 @@ HINT_TRANSLATE_TO_TURKISH = "ترجم للتركية"
 # before the kasra (U+0650). The reverse order looks identical on screen but is
 # a different string, and exact-text matching on it broke the word-order filter
 # for units 9–48 in the past.
-WORD_ORDER_PREFIX = "رَتِّب الكلمات"
+WORD_ORDER_PREFIX = "\u0631\u064e\u062a\u0651\u0650\u0628 الكلمات"
 
 # The two answers of a true/false exercise, exactly as the frontend sends them.
 ANSWER_TRUE = "صَحِيح"

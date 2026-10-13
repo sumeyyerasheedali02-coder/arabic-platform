@@ -1,7 +1,7 @@
 """Checking a student's answer against the stored correct answer."""
 
-_HARAKAT_FIRST, _HARAKAT_LAST = "ً", "ٟ"   # Arabic diacritics (tanwin … wavy hamza)
-_TATWEEL = "ـ"                                    # elongation stroke
+_HARAKAT_FIRST, _HARAKAT_LAST = "\u064b", "\u065f"   # Arabic diacritics (tanwin … wavy hamza)
+_TATWEEL = "\u0640"                                    # elongation stroke
 
 
 def normalize_answer(text: str) -> str:

@@ -9,8 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Student
-from app.schemas import EmailCheckResponse, StudentRegister, Token
-from app.security import create_access_token, hash_password, is_teacher_email, verify_password
+from app.schemas import EmailCheckResponse, SessionInfo, StudentRegister, Token
+from app.security import (
+    create_access_token, get_current_account, hash_password, is_teacher_email, verify_password,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -79,3 +81,10 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
     )
     await db.commit()
     return _token_for(student)
+
+
+@router.get("/me", response_model=SessionInfo)
+async def current_session(account: Student = Depends(get_current_account)):
+    """Who the token belongs to. The frontend calls this to validate a stored login."""
+    return SessionInfo(student_id=account.id, name=account.name,
+                       is_teacher=is_teacher_email(account.email))

@@ -4,7 +4,7 @@
 /** Drop Arabic diacritics (U+064B–U+065F) and tatweel, outer spaces and letter case. */
 export function normalizeAnswer(text) {
   return (text || '').trim().toLowerCase()
-    .split('').filter(c => !(c >= 'ً' && c <= 'ٟ') && c !== 'ـ').join('').trim()
+    .split('').filter(c => !(c >= '\u064b' && c <= '\u065f') && c !== '\u0640').join('').trim()
 }
 
 export function isCorrectAnswer(given, expected) {

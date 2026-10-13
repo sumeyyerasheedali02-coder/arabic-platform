@@ -66,12 +66,10 @@ async def test_expired_token_is_rejected(client, register):
     assert (await client.get("/api/me/progress", headers=_token(str(student.id), -5))).status_code == 401
 
 
-@pytest.mark.xfail(reason="non-numeric sub raises ValueError -> 500 instead of 401")
 async def test_token_with_non_numeric_subject_is_rejected(client):
     assert (await client.get("/api/me/progress", headers=_token("abc"))).status_code == 401
 
 
-@pytest.mark.xfail(reason="token of a deleted account is still accepted")
 async def test_token_of_deleted_account_is_rejected(client, register, db):
     student = await register()
     await db.execute(delete(models.Student).where(models.Student.id == student.id))
@@ -124,3 +122,30 @@ async def test_teacher_account_is_provisioned_from_the_command_line(login):
     assert await teacher_accounts.set_password(TEACHER_EMAIL, "another-long-pass") == 0
     assert (await login(TEACHER_EMAIL, "long-teacher-pass")).status_code == 401
     assert (await login(TEACHER_EMAIL, "another-long-pass")).status_code == 200
+
+
+async def test_token_without_subject_is_rejected(client):
+    from jose import jwt as jose_jwt
+    token = jose_jwt.encode({"exp": datetime.utcnow() + timedelta(minutes=5)}, TEST_SECRET, algorithm="HS256")
+    res = await client.get("/api/me/progress", headers={"Authorization": f"Bearer {token}"})
+    assert res.status_code == 401
+
+
+async def test_session_endpoint_describes_the_logged_in_account(client, register, teacher):
+    student = await register(name="Zeynep Arslan")
+    me = await client.get("/api/auth/me", headers=student.headers)
+    assert me.json() == {"student_id": student.id, "name": "Zeynep Arslan", "is_teacher": False}
+
+    staff = await teacher()
+    assert (await client.get("/api/auth/me", headers=staff.headers)).json()["is_teacher"] is True
+    assert (await client.get("/api/auth/me")).status_code == 401
+
+
+async def test_password_longer_than_bcrypt_accepts_is_rejected_not_a_server_error(client, new_email, register, login):
+    too_long = "ك" * 40          # 80 bytes in UTF-8
+    res = await client.post("/api/auth/register", json={
+        "name": "Uzun", "email": new_email(), "password": too_long})
+    assert res.status_code == 422
+
+    student = await register()
+    assert (await login(student.email, too_long)).status_code == 401

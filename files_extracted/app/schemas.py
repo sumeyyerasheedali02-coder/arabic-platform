@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, List, Any
 from datetime import datetime
 
@@ -9,6 +9,15 @@ class StudentRegister(BaseModel):
     email:    EmailStr
     password: str = Field(min_length=6)
     year:     Optional[int] = 1
+
+    @field_validator("password")
+    @classmethod
+    def password_fits_bcrypt(cls, value: str) -> str:
+        # bcrypt only looks at the first 72 bytes (and newer versions refuse more).
+        # Arabic letters take two bytes each.
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("كلمة المرور طويلة جداً")
+        return value
 
 class StudentLogin(BaseModel):
     email:    EmailStr
@@ -24,6 +33,11 @@ class Token(BaseModel):
 class EmailCheckResponse(BaseModel):
     exists: bool
     name:   Optional[str] = None
+
+class SessionInfo(BaseModel):
+    student_id: int
+    name:       str
+    is_teacher: bool
 
 
 # ── Vocabulary ────────────────────────────
