@@ -62,29 +62,13 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup():
     await init_db()
-    async for db in get_db():
-        result = await db.execute(select(Unit))
-        unit = result.scalars().first()
-        if not unit:
-            from seed_database import seed
+    # First-run bootstrap only: fills a completely empty database with the book
+    # content. It never deletes or replaces anything; replacing content is a
+    # deliberate command-line operation (see seed_database.py).
+    if os.getenv("SEED_ON_EMPTY_DB", "true").strip().lower() in ("1", "true", "yes"):
+        from seed_database import content_is_empty, seed
+        if await content_is_empty():
             await seed()
-        break
-    async for db in get_db():
-        result = await db.execute(select(Unit))
-        unit = result.scalars().first()
-        if not unit:
-            from seed_database import seed
-            await seed()
-        break
-    from seed_database import seed
-    pass  # seed via /api/admin/run-seed-now
-    from sqlalchemy import text
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(text("SELECT COUNT(*) FROM units"))
-        count = result.scalar()
-        if count == 0:
-            import subprocess, sys
-            pass  # seed via /api/admin/run-seed-now
 
 
 # ─────────────────────────────────────────
@@ -606,47 +590,6 @@ async def get_unit_stats(
 #  تشغيل التطبيق
 # ─────────────────────────────────────────
 
-@app.get("/api/admin/seed")
-async def run_seed(db: AsyncSession = Depends(get_db)):
-    import importlib.util, sys
-    spec = importlib.util.spec_from_file_location("seed", "seed_database.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    import asyncio
-    await mod.seed()
-    return {"message": "Done!"}
-
-
-@app.get("/api/run-seed")
-async def run_seed_now():
-    import traceback
-    try:
-        from seed_database import seed
-        pass  # seed via /api/admin/run-seed-now
-        return {"status": "success"}
-    except Exception as e:
-        return {"status": "error", "detail": str(e), "trace": traceback.format_exc()}
-
-
-@app.get("/api/admin/run-seed-now")
-async def run_seed_now_fixed():
-    try:
-        from seed_database import seed
-        from seed_database import seed
-        await seed()
-        return {"status": "success", "message": "Seed completed!"}
-        return {"status": "success", "message": "Seed completed!"}
-    except Exception as e:
-        import traceback
-        return {"status": "error", "detail": str(e), "trace": traceback.format_exc()}
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-
-
-
-
-# 05/09/2026 06:54:54
-
-# redeploy trigger

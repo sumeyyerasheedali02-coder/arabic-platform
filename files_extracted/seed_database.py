@@ -4,10 +4,13 @@ from book2_part2_data import BOOK_2_PART_2
 from book3_part1_data import BOOK_3_PART_1
 from book3_part2_data import BOOK_3_PART_2
 """
-Seed database with Book 1 Part 1 — 8 real units from العربية بين يديك.
-Run once on a fresh database or to replace all content:
-    python seed_database.py
-Students are preserved; all content + progress tables are wiped and rebuilt.
+Load the book content (48 units of العربية بين يديك) into the database.
+
+    python seed_database.py              # fills an EMPTY database, otherwise does nothing
+    python seed_database.py --replace --yes-delete-student-activity
+                                         # rebuilds content; deletes answers, progress, cards
+
+Student accounts are never deleted.
 """
 import asyncio
 import sys
@@ -18,12 +21,12 @@ from datetime import date
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-from sqlalchemy import text, select
+from sqlalchemy import func, select, text, update
 from exercises_data import EXERCISES_DATA
 from database import (
     init_db, AsyncSessionLocal,
     Unit, Lesson, Vocabulary, Dialogue, DialogueLine, Exercise,
-    SRSCard, Student, StudentProgress, ExerciseAnswer,
+    SRSCard, Student, AISession,
 )
 
 # Copy book data file into the backend directory if needed
@@ -828,24 +831,53 @@ def get_all_units_summary() -> list:
 
 
 
-async def seed():
+CONTENT_MODELS = (Unit, Lesson, Vocabulary, Dialogue, DialogueLine, Exercise)
+# Rows that point at content and therefore cannot survive a content replacement.
+ACTIVITY_TABLES = ("srs_cards", "exercise_answers", "student_progress")
+CONTENT_TABLES = ("exercises", "dialogue_lines", "dialogues", "vocabulary", "lessons", "units")
+
+
+class ContentExistsError(RuntimeError):
+    """Raised when seeding would touch a database that already has content."""
+
+
+async def _content_counts(db) -> dict:
+    return {m.__tablename__: (await db.execute(select(func.count()).select_from(m))).scalar()
+            for m in CONTENT_MODELS}
+
+
+async def content_is_empty() -> bool:
+    async with AsyncSessionLocal() as db:
+        return not any((await _content_counts(db)).values())
+
+
+async def seed(replace: bool = False, srs_for_existing_students: bool = False):
+    """Load the book content.
+
+    By default this only fills an empty database and refuses to run otherwise.
+    `replace=True` first deletes all content AND every student's answers,
+    progress and review cards (they reference content rows); student accounts
+    are kept. Everything happens in one transaction, so a failure leaves the
+    database as it was.
+    """
     await init_db()
     async with AsyncSessionLocal() as db:
+        counts = await _content_counts(db)
+        if any(counts.values()) and not replace:
+            raise ContentExistsError(
+                f"database already has content {counts}; nothing was changed")
 
-        # ── Wipe content + activity (keep student accounts) ───────────
-        for table in [
-            "srs_cards", "exercise_answers", "student_progress",
-            "exercises", "dialogue_lines", "dialogues",
-            "vocabulary", "lessons", "units",
-        ]:
-            await db.execute(text(f"DELETE FROM {table}"))
-        await db.commit()
-        print("Cleared existing content.")
+        if replace:
+            await db.execute(update(AISession).values(unit_id=None))
+            for table in ACTIVITY_TABLES + CONTENT_TABLES:
+                await db.execute(text(f"DELETE FROM {table}"))
+            print("Cleared existing content and student activity.")
 
-        # ── Fetch existing students for SRS card creation ──────────────
-        result = await db.execute(select(Student))
-        students = result.scalars().all()
-        print(f"Found {len(students)} existing student(s).")
+        students = []
+        if srs_for_existing_students:
+            result = await db.execute(select(Student))
+            students = result.scalars().all()
+            print(f"Found {len(students)} existing student(s).")
 
         all_vocab_ids = []
 
@@ -1078,8 +1110,33 @@ async def seed():
         await db.flush()
         await db.commit()
         print(f"\n  SRS cards : {srs_count} ({len(students)} students × {len(all_vocab_ids)} words)")
-        print("\nDone! Database seeded with Book 1 Part 1 (8 units).")
+        print(f"\nDone! Seeded {len(all_units)} units.")
+
+
+def _main(argv=None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Load the book content into the database named by DATABASE_URL.")
+    parser.add_argument("--replace", action="store_true",
+                        help="delete existing content and ALL student answers, progress and "
+                             "review cards, then load the content again")
+    parser.add_argument("--yes-delete-student-activity", action="store_true",
+                        help="required together with --replace")
+    parser.add_argument("--srs-for-existing-students", action="store_true",
+                        help="create a review card for every word for every existing student")
+    args = parser.parse_args(argv)
+
+    if args.replace and not args.yes_delete_student_activity:
+        parser.error("--replace deletes every student's answers, progress and review cards; "
+                     "add --yes-delete-student-activity to confirm")
+    try:
+        asyncio.run(seed(replace=args.replace,
+                         srs_for_existing_students=args.srs_for_existing_students))
+    except ContentExistsError as exc:
+        print(f"Skipped: {exc}")
+    return 0
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    raise SystemExit(_main())
