@@ -5,9 +5,9 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'tracking/**']),
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,mjs}'],
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,
@@ -28,7 +28,7 @@ export default defineConfig([
   },
   {
     // Build tooling and the unit tests run in Node, not in the browser
-    files: ['*.config.js', 'tests/**/*.js'],
+    files: ['*.config.js', 'tests/**/*.js', 'scripts/**/*.mjs'],
     languageOptions: { globals: globals.node },
   },
 ])

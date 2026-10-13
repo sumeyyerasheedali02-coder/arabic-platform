@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/build-sites.mjs",
     "lint": "eslint .",
     "test": "node --test \"tests/**/*.test.js\"",
     "preview": "vite preview"
