@@ -95,11 +95,13 @@ class AnswerResult(BaseModel):
 # ── Lesson ────────────────────────────────
 class LessonOut(BaseModel):
     id:            int
+    unit_id:       Optional[int] = None
     lesson_number: int
     title_ar:      str
     title_tr:      Optional[str]
     lesson_type:   Optional[str]
     grammar_focus: Optional[str]
+    content_ar:    Optional[str] = None
 
     model_config = {"from_attributes": True}
 

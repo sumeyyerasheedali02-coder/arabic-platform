@@ -28,6 +28,8 @@ async def test_lessons_of_unit_are_ordered(client, content):
 async def test_single_lesson_and_missing_lesson(client, content):
     lesson = (await client.get(f"/api/lessons/{content.a_muf}")).json()
     assert lesson["id"] == content.a_muf and lesson["title_tr"] == "Kelimeler"
+    # A lesson says which unit it belongs to, so a page can load its unit's vocabulary
+    assert lesson["unit_id"] == content.unit_a and lesson["content_ar"] is None
     assert (await client.get("/api/lessons/99999")).status_code == 404
 
 
