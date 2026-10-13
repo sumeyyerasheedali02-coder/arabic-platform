@@ -51,6 +51,14 @@ body {
 .app-sidebar > div { flex-shrink: 0; }
 .sidebar-units { min-height: 0; overscroll-behavior: contain; }
 .app-header  { grid-column: 2; grid-row: 1; }
+.tracking-link {
+  display: inline-flex; align-items: center; white-space: nowrap; flex-shrink: 0;
+  padding: 7px 10px; border-radius: 7px; font-size: 11px; font-weight: 600;
+  color: var(--navy); background: #f7efdd; border: 1px solid var(--gold);
+  text-decoration: none;
+}
+.tracking-link:hover { background: var(--navy); color: #fff; }
+.tracking-link:focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; }
 .app-main    { grid-column: 2; grid-row: 2; min-width: 0; overflow-y: auto; overscroll-behavior: contain; }
 
 /* The sidebar selects units on desktop; mobile has a horizontal chooser. */

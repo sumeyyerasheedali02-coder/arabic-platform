@@ -83,6 +83,20 @@ async def _add_student_number(conn: AsyncConnection) -> None:
     await conn.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_students_student_number ON students (student_number)"))
 
+
+async def _add_tracking_tables(conn: AsyncConnection) -> None:
+    from app.tracking.models import (
+        TrackingAudit,
+        TrackingCycle,
+        TrackingEntry,
+        TrackingExam,
+        TrackingTerm,
+        TrackingWeek,
+    )
+
+    for model in (TrackingCycle, TrackingWeek, TrackingEntry, TrackingTerm, TrackingExam, TrackingAudit):
+        await conn.run_sync(lambda sync, table=model.__table__: table.create(sync, checkfirst=True))
+
 MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     # Lookups by student were full table scans. Measured on SQLite with 300
     # students: the due-cards query 9.1 ms -> 0.05 ms, a card lookup
@@ -97,6 +111,7 @@ MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     ("0003_staff_roles", _add_staff_roles),
     ("0004_student_number", _add_student_number),
     ("0005_legacy_section_compatibility", align_legacy_sections),
+    ("0006_independent_grade_tracking", _add_tracking_tables),
 )
 
 _CREATE_LOG = text(

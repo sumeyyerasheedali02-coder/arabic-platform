@@ -47,6 +47,33 @@ async def test_a_database_from_before_the_indexes_is_upgraded_once(tmp_path):
         await old.dispose()
 
 
+async def test_tracking_upgrade_adds_only_its_tables_and_preserves_legacy_grades(tmp_path):
+    old = create_async_engine(f"sqlite+aiosqlite:///{(tmp_path / 'before_tracking.db').as_posix()}")
+    try:
+        async with old.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            for table in reversed(Base.metadata.sorted_tables):
+                if table.name.startswith("takip_"):
+                    await conn.run_sync(lambda sync, table=table: table.drop(sync))
+            await conn.execute(text("CREATE TABLE grade_entries (id INTEGER PRIMARY KEY, score INTEGER)"))
+            await conn.execute(text("INSERT INTO grade_entries VALUES (7, 85)"))
+            await conn.execute(text(
+                "INSERT INTO students (id, name, email, password_hash, class_section) "
+                "VALUES (23, 'Existing', 'existing@example.com', 'unchanged-hash', 'C')"))
+            await apply_migrations(conn)
+            assert (await conn.execute(text("SELECT id, score FROM grade_entries"))).all() == [(7, 85)]
+            assert (await conn.execute(text(
+                "SELECT id, password_hash, class_section FROM students"))).all() == [(23, "unchanged-hash", "C")]
+            names = await conn.run_sync(lambda sync: inspect(sync).get_table_names())
+            assert len([name for name in names if name.startswith("takip_")]) == 6
+            for name in names:
+                if name.startswith("takip_"):
+                    assert (await conn.execute(text(f"SELECT COUNT(*) FROM {name}"))).scalar() == 0
+            assert await apply_migrations(conn) == []
+    finally:
+        await old.dispose()
+
+
 async def test_existing_accounts_gain_a_nullable_section_without_losing_activity(tmp_path):
     old = create_async_engine(f"sqlite+aiosqlite:///{(tmp_path / 'before_sections.db').as_posix()}")
     try:

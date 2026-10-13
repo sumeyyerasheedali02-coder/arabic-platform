@@ -27,6 +27,7 @@ async def init_db() -> list[str]:
     from app import models  # noqa: F401  (registers the tables on Base.metadata)
     from app.legacy_schema import align_legacy_sections
     from app.migrations import apply_migrations
+    from app.tracking import models as tracking_models  # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
