@@ -67,10 +67,15 @@ export default function ExercisesPage() {
   const answered     = results.length > current
   const totalPoints  = results.reduce((s, r) => s + (r?.points_earned || 0), 0)
   const correctCount = results.filter(r => r?.is_correct).length
-  const maxPoints    = exercises.slice(0, results.length).reduce((s, e) => s + (e.points || 10), 0)
+  // Success rate = points of the correctly answered exercises / points of all
+  // answered ones. Guests are awarded no points, so it cannot be based on
+  // points_earned (that showed 0% for a guest who answered everything right).
+  const answeredExercises = exercises.slice(0, results.length)
+  const maxPoints    = answeredExercises.reduce((s, e) => s + (e.points || 10), 0)
+  const rightPoints  = answeredExercises.reduce((s, e, i) => s + (results[i]?.is_correct ? (e.points || 10) : 0), 0)
 
   if (done) {
-    const pct = maxPoints > 0 ? Math.round((totalPoints / maxPoints) * 100) : 0
+    const pct = maxPoints > 0 ? Math.round((rightPoints / maxPoints) * 100) : 0
     return (
       <SessionSummary
         total={exercises.length} correctCount={correctCount} pct={pct}

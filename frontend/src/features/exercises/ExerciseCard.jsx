@@ -13,11 +13,14 @@ export default function ExerciseCard({ exercise, onAnswer, isGuest }) {
   const [result, setResult]         = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [showLoginHint, setShowLoginHint] = useState(false)
+  // The answer that could not be sent, kept so it can be sent again unchanged
+  const [unsent, setUnsent]         = useState(null)
 
   const submit = async (answer) => {
     if (submitting || result) return
     const value = answer ?? input.trim()
     if (!value) return
+    setUnsent(null)
 
     if (isGuest) {
       // Guest: checked locally with the same rule as the server, nothing is saved
@@ -34,7 +37,8 @@ export default function ExerciseCard({ exercise, onAnswer, isGuest }) {
       setResult(res.data)
       onAnswer(res.data)
     } catch {
-      setResult({ is_correct: false, correct_answer: exercise.correct_answer || '', points_earned: 0 })
+      // Not sent is not the same as wrong: nothing is marked, the student can retry
+      setUnsent(value)
     } finally { setSubmitting(false) }
   }
 
@@ -129,6 +133,27 @@ export default function ExerciseCard({ exercise, onAnswer, isGuest }) {
             </div>
           )}
         </>
+      )}
+
+      {!result && unsent != null && (
+        <div role="alert" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+          fontSize: 12, color: '#92400e', background: '#fff7ed', border: '1px solid #fed7aa',
+          borderRadius: 9, padding: '8px 12px', marginTop: 10,
+        }}>
+          <span>تعذّر إرسال الإجابة. تحقق من اتصالك بالإنترنت.</span>
+          <button
+            onClick={() => submit(unsent)}
+            disabled={submitting}
+            style={{
+              background: '#92400e', color: '#fff', border: 'none', cursor: 'pointer',
+              borderRadius: 8, padding: '5px 14px', fontWeight: 500, fontSize: 12,
+              fontFamily: 'DM Sans, sans-serif',
+            }}
+          >
+            إعادة المحاولة
+          </button>
+        </div>
       )}
 
       {result && (
