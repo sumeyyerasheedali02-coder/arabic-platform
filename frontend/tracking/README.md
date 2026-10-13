@@ -31,7 +31,7 @@
 
 راجع أن `DATABASE_URL` محلي قبل التشغيل. الإقلاع يضيف الجداول الجديدة فقط، ويترك حسابات التعلم ومحتواه وتقدمه كما هي. لا تشغّل seed.
 
-من `tracking/`:
+من `frontend/tracking/`:
 
 ```powershell
 npm ci
@@ -42,7 +42,7 @@ npm run dev
 
 ## النشر التلقائي من GitHub
 
-البناء الحالي في `frontend/package.json` يشغّل `frontend/scripts/build-sites.mjs`: يبني التعلم إلى `frontend/dist` ثم يبني العلامات إلى `frontend/dist/grades` مع مسارات ملفات تبدأ بـ`/grades/`. لا تُضاف حسابات أو علامات عند البناء. Vercel يخدم كل تطبيق بملف HTML منفصل؛ تحديث `main` يحدّث الواجهتين تلقائيًا.
+البناء الحالي في `frontend/package.json` يشغّل `frontend/scripts/build-sites.mjs`: يبني التعلم إلى `frontend/dist` ثم يبني حزمة `frontend/tracking/` إلى `frontend/dist/grades` مع مسارات ملفات تبدأ بـ`/grades/`. الحزمتان داخل جذر البناء الحالي، لكن لكل منهما تطبيق وإعداد واعتماديات وتنسيقات منفصلة. لا تُضاف حسابات أو علامات عند البناء. Vercel يخدم كل تطبيق بملف HTML منفصل؛ تحديث `main` يحدّث الواجهتين تلقائيًا.
 
 الرابط المقصود: `https://arabic-platform-flame.vercel.app/grades/`. يستخدم الموقعان نطاق Vercel والخادم نفسيهما، لذا تكفي إعدادات `VITE_API_URL` وCORS الموجودة. لا يحتاج هذا الوضع تسجيل الدخول إلى لوحة Vercel أو إنشاء مشروع استضافة جديد. الحساب نفسه يعمل في التطبيقين، مع جلسة دخول مستقلة للعلامات.
 
@@ -52,7 +52,7 @@ npm run dev
 
 1. خذ نسخة احتياطية لقاعدة Railway وتحقق من استعادتها قبل نشر ترقية الخادم.
 2. انشر الخلفية التي تحتوي `/api/tracking/*`. الترحيل `0006_independent_grade_tracking` ينشئ ستة جداول `takip_*`؛ لا يكتب إلى حسابات الطلاب أو نشاط التعلم، ولا يغير جداول `grade_*` القديمة في Railway أو يستوردها.
-3. أنشئ **مشروع Vercel جديدًا** للمستودع نفسه، وRoot Directory = `tracking`. لا تغير جذر أو عنوان مشروع التعلم الموجود.
+3. أنشئ **مشروع Vercel جديدًا** للمستودع نفسه، وRoot Directory = `frontend/tracking`. لا تغير جذر أو عنوان مشروع التعلم الموجود.
 4. اضبط `VITE_API_URL` في المشروع الجديد على خادم Railway الحالي، دون `/api`. `npm run build` يرفض البناء الإنتاجي إن غاب المتغير. المخرج `dist`.
 5. أضف نطاق الموقع الجديد بالضبط إلى `CORS_ORIGINS` على Railway، **مع الاحتفاظ بنطاق منصة التعلم** والعناوين المحلية المطلوبة، ثم أعد نشر الخلفية. مثال: `https://arabic-platform-flame.vercel.app,https://<tracking-domain>,http://localhost:5173,http://localhost:5174`.
    اضبط أيضًا `TRACKING_SITE_URL` على رابط منصة العلامات. زر «منصة العلامات» في واجهة التعلم يأخذ العنوان من `/api/tracking/site`، ولا ينقل رمز الجلسة أو كلمة المرور في الرابط. في التطوير يفتح `http://localhost:5174/`.
@@ -68,7 +68,7 @@ npm run dev
 .venv/Scripts/python.exe -m pytest -q
 # PostgreSQL: TEST_DATABASE_URL يجب أن يشير لقاعدة اختبار باسم يحوي arabiq_test
 
-# tracking/
+# frontend/tracking/
 npm run lint
 npm test
 $env:VITE_API_URL='https://backend.invalid'

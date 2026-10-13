@@ -3,15 +3,20 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadEnv } from 'vite'
 
 const frontend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const tracking = path.resolve(frontend, '../tracking')
+const tracking = path.join(frontend, 'tracking')
 const output = path.join(frontend, 'dist', 'grades')
+// Preview deployments may not inherit production-only Vercel variables.
+// This public backend is the shared platform API, never a credential.
+const environment = { ...loadEnv('production', frontend, 'VITE_'), ...process.env }
+environment.VITE_API_URL ||= 'https://adaptable-solace-production-e226.up.railway.app'
 if (!existsSync(path.join(tracking, 'package-lock.json'))) {
-  throw new Error('The tracking application must be present alongside frontend in the checkout.')
+  throw new Error('The independent tracking application must be present inside the build root.')
 }
 function run(script, args, cwd) {
-  const result = spawnSync(process.execPath, [script, ...args], { cwd, stdio: 'inherit', env: process.env })
+  const result = spawnSync(process.execPath, [script, ...args], { cwd, stdio: 'inherit', env: environment })
   if (result.error) throw result.error
   if (result.status !== 0) process.exit(result.status || 1)
 }

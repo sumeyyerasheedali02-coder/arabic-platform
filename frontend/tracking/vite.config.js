@@ -7,5 +7,5 @@ export default defineConfig(({ command, mode }) => {
     throw new Error('Set VITE_API_URL to the shared account backend before building.')
   }
   const proxy = { '/api': { target: env.VITE_DEV_API_TARGET || 'http://localhost:8001', changeOrigin: true } }
-  return { plugins: [react()], server: { proxy }, preview: { proxy } }
+  return { plugins: [react()], css: { postcss: { plugins: [] } }, server: { proxy }, preview: { proxy } }
 })
