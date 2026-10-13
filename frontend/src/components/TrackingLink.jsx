@@ -5,7 +5,10 @@ export default function TrackingLink() {
   const development = import.meta.env.DEV
   const { data } = useApiData(development ? null : 'tracking-site', () =>
     api.get('/tracking/site').then(response => response.data))
-  const destination = development ? 'http://localhost:5174/' : data?.site_url
+  // /grades/ is a second application in the same automatic Vercel deployment.
+  // The server may override it if a dedicated grade-site domain is configured.
+  const destination = development ? 'http://localhost:5174/'
+    : data?.site_url || new URL('/grades/', window.location.origin).href
   let href = null
   try {
     const url = new URL(destination)

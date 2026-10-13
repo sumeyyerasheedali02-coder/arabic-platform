@@ -1,5 +1,7 @@
 {
   "rewrites": [
+    { "source": "/grades", "destination": "/grades/index.html" },
+    { "source": "/grades/(.*)", "destination": "/grades/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
