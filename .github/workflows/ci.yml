@@ -59,3 +59,23 @@ jobs:
       - run: npm run build
         env:
           VITE_API_URL: https://backend.invalid   # only to exercise the production build
+
+  tracking:
+    name: Independent grade tracking (lint, tests, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tracking
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tracking/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+        env:
+          VITE_API_URL: https://backend.invalid

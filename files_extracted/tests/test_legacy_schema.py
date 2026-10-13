@@ -6,7 +6,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.legacy_schema import align_legacy_sections
-from app.migrations import apply_migrations
+from app.migrations import MIGRATIONS, apply_migrations
 from app.models import Student, TeacherSection
 
 from ._app import Base, engine
@@ -47,7 +47,7 @@ async def test_railway_sections_keep_values_and_accept_both_column_names():
             "SELECT id,teacher_id,section,created_at FROM teacher_sections"))).all()
 
         await align_legacy_sections(conn)
-        assert len(await apply_migrations(conn)) == 5
+        assert len(await apply_migrations(conn)) == len(MIGRATIONS)
         assert (await conn.execute(text(
             "SELECT id,name,email,password_hash,role,section FROM students ORDER BY id"))).all() == before
         assert (await conn.execute(text(

@@ -1,0 +1,33 @@
+.header-actions{display:flex;gap:10px;align-items:center}
+.header-actions .dugme{border-color:#ffffff55;background:transparent}
+.login-wrap{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;align-items:stretch;margin:50px 0}
+.login-wrap .hero{display:flex;flex-direction:column;justify-content:center;min-height:390px}
+.login-form{margin:0;padding:32px}
+.login-form label,.profile-form label{margin-top:22px}
+.login-form .dugme,.profile-form .dugme{width:100%;margin-top:24px}
+.profile-form{max-width:520px;margin:70px auto}
+.page-heading{margin:30px 0 24px}
+.cycle-selector{max-width:360px;margin-bottom:20px}
+.cycle-create{padding:14px 20px}
+summary{cursor:pointer;font-weight:600}
+details[open] summary{margin-bottom:18px}
+.editor-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+.editor-heading>div:first-child{min-width:180px}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px}
+.workspace-fieldset{border:0;padding:0;margin:0;min-width:0}
+button:disabled{opacity:.55;cursor:wait}
+.sekmeler .refresh-button{margin-inline-start:auto}
+.grade-table th{white-space:normal;min-width:100px}
+.grade-table input[type=number]{width:70px}
+.grade-table th:nth-child(2),.grade-table td:nth-child(2){position:sticky;inset-inline-start:0;background:var(--yuzey);z-index:1}
+.grade-table th:nth-child(2){background:var(--cizgi-2)}
+.grade-table td.no{max-width:150px}
+.ozet small{font:14px var(--metin);color:var(--soluk);margin-inline-start:5px}
+.uyari .dugme{margin-inline-start:14px}
+.kart h2{margin-bottom:14px}
+.tablo-kutu{margin-top:16px}
+.not-kutu{white-space:pre-wrap;overflow-wrap:anywhere}
+[dir=rtl] label,[dir=rtl] th,[dir=rtl] .goz,[dir=rtl] .etiket,[dir=rtl] .logo span{font-family:var(--metin);letter-spacing:0}
+[dir=rtl] label,[dir=rtl] th{font-size:12px}
+[dir=rtl] .logo span{font-size:11px}
+@media(max-width:720px){.login-wrap{grid-template-columns:1fr;margin:20px 0;gap:18px}.login-wrap .hero{min-height:240px}.login-form{padding:24px}.editor-heading{flex-wrap:wrap}.bant-ic{align-items:flex-start}.logo b{font-size:16px}.logo span{font-size:8px;letter-spacing:.02em}.header-actions{gap:6px}.sekmeler button{font-size:13px;padding:10px 8px}.sekmeler .refresh-button{margin-inline-start:0}.satir>div{min-width:120px}.profile-form{margin:30px auto}}
