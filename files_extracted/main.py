@@ -15,6 +15,10 @@ from app.config import get_settings
 from app.database import init_db
 from app.routers import ALL_ROUTERS
 
+# Show the application's own INFO messages (migrations applied, first-run content
+# load) next to uvicorn's. Has no effect if logging is already configured.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s: %(message)s")
+
 settings = get_settings()
 logger = logging.getLogger("arabiq")
 
@@ -22,7 +26,9 @@ APP_VERSION = "1.0.0"
 
 
 async def on_startup() -> None:
-    await init_db()
+    applied = await init_db()
+    if applied:
+        logger.info("Database migrations applied: %s", ", ".join(applied))
     # First-run bootstrap only: fills a completely empty database with the base
     # content. It never deletes or replaces anything; replacing content is a
     # deliberate command-line operation (python -m tools.seed --help).
