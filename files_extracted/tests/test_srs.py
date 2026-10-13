@@ -2,8 +2,9 @@ from datetime import date, timedelta
 
 from sqlalchemy import select
 
-from ._app import models
 from app.services.srs import preview_intervals, sm2
+
+from ._app import models
 
 
 def _iso(days):
@@ -114,7 +115,8 @@ async def test_due_cards_say_what_each_rating_will_do(client, register, content)
     assert card["next_interval_days"] == {"0": 1, "1": 1, "2": 1, "3": 1, "4": 1, "5": 1}
 
     # The preview is exactly what a review then does.
-    await client.post("/api/me/srs/review", headers=student.headers, json={"vocabulary_id": word, "quality": 4})
+    await client.post("/api/me/srs/review", headers=student.headers,
+                      json={"vocabulary_id": word, "quality": 4})
     from ._app import AsyncSessionLocal
     async with AsyncSessionLocal() as db:
         stored = (await db.execute(select(models.SRSCard).where(

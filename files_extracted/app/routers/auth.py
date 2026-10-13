@@ -11,7 +11,11 @@ from app.database import get_db
 from app.models import Student
 from app.schemas import EmailCheckResponse, SessionInfo, StudentRegister, Token
 from app.security import (
-    create_access_token, get_current_account, hash_password, is_teacher_email, verify_password,
+    create_access_token,
+    get_current_account,
+    hash_password,
+    is_teacher_email,
+    verify_password,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])

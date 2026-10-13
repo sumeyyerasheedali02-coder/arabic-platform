@@ -31,7 +31,8 @@ async def test_a_database_from_before_the_indexes_is_upgraded_once(tmp_path):
             await conn.run_sync(Base.metadata.create_all)
             for index in EXPECTED_INDEXES.values():           # as deployed before this change
                 await conn.execute(text(f"DROP INDEX {index}"))
-            await conn.execute(text("INSERT INTO students (name, email, password_hash) VALUES ('a', 'a@example.com', 'x')"))
+            await conn.execute(text(
+                "INSERT INTO students (name, email, password_hash) VALUES ('a', 'a@example.com', 'x')"))
 
         async with old.begin() as conn:
             assert await apply_migrations(conn) == [migration_id for migration_id, _ in MIGRATIONS]
@@ -58,6 +59,11 @@ def test_migrate_tool_parses_its_arguments(argv, monkeypatch):
     from tools import migrate
 
     calls = []
-    monkeypatch.setattr(migrate.asyncio, "run", lambda coroutine: (calls.append(coroutine.__name__), coroutine.close(), 0)[2])
+    def fake_run(coroutine):
+        calls.append(coroutine.__name__)
+        coroutine.close()
+        return 0
+
+    monkeypatch.setattr(migrate.asyncio, "run", fake_run)
     assert migrate.main(argv) == 0
     assert calls == ["status" if argv else "migrate"]

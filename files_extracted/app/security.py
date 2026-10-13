@@ -63,7 +63,7 @@ async def get_current_account(
         # python-jose requires `sub` to be a string; ids are stored as str(id).
         student_id = int(payload.get("sub"))
     except (JWTError, TypeError, ValueError):
-        raise credentials_exception
+        raise credentials_exception from None
 
     student = (await db.execute(select(Student).where(Student.id == student_id))).scalar_one_or_none()
     if student is None:

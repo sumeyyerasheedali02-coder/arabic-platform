@@ -1,6 +1,16 @@
 """ORM models. Table and column names are part of the deployed database schema."""
 from sqlalchemy import (
-    JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, func,
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -83,7 +93,8 @@ class Dialogue(Base):
     situation_tr     = Column(Text)
 
     lesson           = relationship("Lesson", back_populates="dialogues")
-    lines            = relationship("DialogueLine", back_populates="dialogue", cascade="all, delete", order_by="DialogueLine.line_order")
+    lines            = relationship("DialogueLine", back_populates="dialogue", cascade="all, delete",
+                                    order_by="DialogueLine.line_order")
 
 
 class DialogueLine(Base):

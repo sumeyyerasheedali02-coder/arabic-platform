@@ -11,7 +11,11 @@ from app.models import SRSCard, Vocabulary
 from app.schemas import SRSCardOut, SRSReview
 from app.security import get_current_student
 from app.services.srs import (
-    NEW_CARD_EASE_FACTOR, NEW_CARD_INTERVAL_DAYS, NEW_CARD_REPETITIONS, preview_intervals, sm2,
+    NEW_CARD_EASE_FACTOR,
+    NEW_CARD_INTERVAL_DAYS,
+    NEW_CARD_REPETITIONS,
+    preview_intervals,
+    sm2,
 )
 
 router = APIRouter(prefix="/api/me/srs", tags=["srs"])

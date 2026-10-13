@@ -2,8 +2,8 @@
 خوارزمية SM-2 للحفظ المتباعد (Spaced Repetition System)
 مبنية على خوارزمية SuperMemo-2 الأصلية
 """
-from datetime import date, timedelta
 from dataclasses import dataclass
+from datetime import date, timedelta
 
 
 @dataclass

@@ -141,7 +141,8 @@ async def test_session_endpoint_describes_the_logged_in_account(client, register
     assert (await client.get("/api/auth/me")).status_code == 401
 
 
-async def test_password_longer_than_bcrypt_accepts_is_rejected_not_a_server_error(client, new_email, register, login):
+async def test_password_longer_than_bcrypt_accepts_is_rejected_not_a_server_error(
+        client, new_email, register, login):
     too_long = "ك" * 40          # 80 bytes in UTF-8
     res = await client.post("/api/auth/register", json={
         "name": "Uzun", "email": new_email(), "password": too_long})

@@ -28,8 +28,17 @@ from sqlalchemy import delete, func, select, update
 
 from app.database import AsyncSessionLocal, init_db
 from app.models import (
-    AISession, Dialogue, DialogueLine, Exercise, ExerciseAnswer, Lesson,
-    SRSCard, Student, StudentProgress, Unit, Vocabulary,
+    AISession,
+    Dialogue,
+    DialogueLine,
+    Exercise,
+    ExerciseAnswer,
+    Lesson,
+    SRSCard,
+    Student,
+    StudentProgress,
+    Unit,
+    Vocabulary,
 )
 from content import exercises as sets
 from content.books import all_units

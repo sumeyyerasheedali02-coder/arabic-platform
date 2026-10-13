@@ -19,8 +19,15 @@ from content.exercises.word_order_units_9_48 import WORD_ORDER
 # Fixed texts (hints, the word-order prefix, true/false answers) live in
 # content/labels.py and are re-exported here for the seeding tool.
 from content.labels import (  # noqa: E402
-    ANSWER_FALSE, ANSWER_TRUE, HINT_ANTONYM, HINT_COMPREHENSION, HINT_FILL_BLANK,
-    HINT_PLURAL, HINT_SYNONYM, HINT_TRANSLATE_TO_TURKISH, HINT_WORD_ORDER,
+    ANSWER_FALSE,
+    ANSWER_TRUE,
+    HINT_ANTONYM,
+    HINT_COMPREHENSION,
+    HINT_FILL_BLANK,
+    HINT_PLURAL,
+    HINT_SYNONYM,
+    HINT_TRANSLATE_TO_TURKISH,
+    HINT_WORD_ORDER,
     WORD_ORDER_PREFIX,
 )
 

@@ -25,7 +25,10 @@ async def status() -> int:
 
 async def migrate() -> int:
     newly_applied = await init_db()
-    print(f"Applied: {', '.join(newly_applied)}" if newly_applied else "Nothing to do: the database is up to date.")
+    if newly_applied:
+        print(f"Applied: {', '.join(newly_applied)}")
+    else:
+        print("Nothing to do: the database is up to date.")
     return 0
 
 

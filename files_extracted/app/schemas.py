@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
-from typing import Any, Dict, List, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # ── Auth ──────────────────────────────────

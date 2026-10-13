@@ -1,5 +1,5 @@
 """Requests must not run a query per student, per unit or per word."""
-from ._app import AsyncSessionLocal, hash_password, models
+from ._app import AsyncSessionLocal, models
 
 
 async def _add_students(count, content, prefix):
