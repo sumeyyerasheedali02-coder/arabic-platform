@@ -21,6 +21,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from app.config import ADMIN_EMAIL, get_settings
+from app.legacy_schema import align_legacy_sections
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ MigrationAction = tuple[str, ...] | Callable[[AsyncConnection], Awaitable[None]]
 
 
 async def _add_staff_roles(conn: AsyncConnection) -> None:
+    await align_legacy_sections(conn)
     columns = await conn.run_sync(lambda sync: inspect(sync).get_columns("students"))
     names = {column["name"] for column in columns}
     additions = {
@@ -94,6 +96,7 @@ MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     ("0002_student_class_section", _add_student_class_section),
     ("0003_staff_roles", _add_staff_roles),
     ("0004_student_number", _add_student_number),
+    ("0005_legacy_section_compatibility", align_legacy_sections),
 )
 
 _CREATE_LOG = text(

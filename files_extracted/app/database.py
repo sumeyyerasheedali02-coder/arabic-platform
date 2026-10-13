@@ -25,10 +25,12 @@ async def init_db() -> list[str]:
     that already existed) are applied. Nothing is ever dropped.
     """
     from app import models  # noqa: F401  (registers the tables on Base.metadata)
+    from app.legacy_schema import align_legacy_sections
     from app.migrations import apply_migrations
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await align_legacy_sections(conn)
         return await apply_migrations(conn)
 
 
