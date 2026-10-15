@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from "react";
-import api from "../../api/client";
+import { streamReply } from './streamReply';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([
-    { role: "model", content: "أهلاً! أنا مرشد، مساعدك في تعلم العربية 🌙" }
+    { role: "model", content: "اسألني بالعربية أو التركية. Arapça veya Türkçe sorabilirsin." }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const listRef = useRef(null);
+  const requestRef = useRef(null);
+  useEffect(() => () => requestRef.current?.abort(), []);
 
   // Keep the newest message in view by scrolling the message list itself.
   // (scrollIntoView also scrolled the whole page, pushing the chat title away.)
@@ -22,20 +24,24 @@ export default function ChatPage() {
     setInput("");
     setMessages(prev => [...prev, { role: "user", content: text }]);
     setLoading(true);
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const history = [...messages.filter(m => !m.failed), { role: 'user', content: text }];
+    let reply = '';
+    const replyIndex = messages.length + 1;
     try {
-      // The server keeps no history: the whole conversation is sent every time.
-      const res = await api.post("/chat", {
-        messages: [...messages, {role:"user",content:text}].map(m => ({ role: m.role, content: m.content })),
-      });
-      setMessages(prev => [...prev, { role: "model", content: res.data.reply }]);
+      await streamReply(history.map(m => ({ role: m.role, content: m.content })), chunk => {
+        reply += chunk;
+        setMessages(prev => [...prev.slice(0, replyIndex), { role: 'model', content: reply }]);
+      }, controller.signal);
     } catch (err) {
-      // The server explains why the tutor could not answer; no response at all means no connection
-      const detail = err.response?.data?.detail;
-      const content = !err.response ? "⚠️ تعذّر الاتصال بالخادم"
-        : typeof detail === "string" ? `⚠️ ${detail}` : "⚠️ تأكد من إعداد Gemini API key";
-      setMessages(prev => [...prev, { role: "model", content }]);
+      if (!controller.signal.aborted) {
+        const content = `${reply ? reply + '\n\n' : ''}⚠️ ${err.message || 'تعذّر الاتصال بالخادم'}`;
+        setMessages(prev => [...prev.slice(0, replyIndex), { role: 'model', content, failed: true }]);
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -44,7 +50,7 @@ export default function ChatPage() {
         <div style={{width:"40px",height:"40px",borderRadius:"50%",background:"#C9A84C",color:"#1a2744",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",fontWeight:"700"}}>م</div>
         <div>
           <div style={{fontSize:"16px",fontWeight:"700",color:"#F5F0E8"}}>مرشد</div>
-          <div style={{fontSize:"11px",color:"rgba(245,240,232,0.6)"}}>مساعد تعلم العربية · Gemini AI</div>
+          <div style={{fontSize:"11px",color:"rgba(245,240,232,0.6)"}}>العربية · Türkçe</div>
         </div>
       </div>
 
@@ -59,7 +65,7 @@ export default function ChatPage() {
             </div>
           </div>
         ))}
-        {loading && (
+        {loading && messages.at(-1)?.role !== 'model' && (
           <div style={{display:"flex",gap:"0.625rem",alignItems:"flex-end"}}>
             <div style={{width:"32px",height:"32px",borderRadius:"50%",background:"#1a2744",color:"#C9A84C",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:"700"}}>م</div>
             <div style={{background:"#fff",border:"1px solid #e8e0d0",borderRadius:"16px",padding:"0.875rem 1rem",color:"#C9A84C",fontSize:"20px",letterSpacing:"4px"}}>···</div>
@@ -71,7 +77,7 @@ export default function ChatPage() {
       <div style={{padding:"0.875rem 1.25rem",background:"#fff",borderTop:"1px solid #e8e0d0",display:"flex",alignItems:"center",gap:"0.625rem"}}>
         <button onClick={send} disabled={loading||!input.trim()} style={{width:"42px",height:"42px",borderRadius:"50%",background:"#1a2744",border:"1.5px solid #C9A84C",color:"#F5F0E8",fontSize:"18px",cursor:"pointer",flexShrink:0}}>↑</button>
         <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()}
-          placeholder="اكتب سؤالك..." dir="rtl" disabled={loading}
+          placeholder="اكتب سؤالك · Sorunu yaz..." dir="auto" disabled={loading}
           style={{flex:1,border:"1.5px solid #d0c5b0",borderRadius:"12px",padding:"0.75rem 1rem",fontSize:"15px",color:"#1a2744",outline:"none",background:"#F5F0E8",fontFamily:"inherit"}} />
       </div>
     </div>

@@ -1,5 +1,8 @@
 """Conversation with the Arabic tutor (open to guests)."""
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,3 +34,30 @@ async def chat_with_ai(data: ChatRequest, db: AsyncSession = Depends(get_db)):
     except ai.TutorUnavailable as problem:
         raise HTTPException(status_code=problem.status_code, detail=problem.reason) from None
     return ChatResponse(reply=reply, corrections=[])
+
+
+@router.post("/chat/stream")
+async def stream_chat(data: ChatRequest, db: AsyncSession = Depends(get_db)):
+    unit_context = await _unit_context(db, data.unit_id) if data.unit_id else ""
+    reply = ai.stream_reply(data.messages, unit_context)
+    try:
+        first = await anext(reply)
+    except ai.TutorUnavailable as problem:
+        raise HTTPException(status_code=problem.status_code, detail=problem.reason) from None
+
+    def event(value):
+        return json.dumps(value, ensure_ascii=False) + "\n"
+
+    async def events():
+        try:
+            yield event({"text": first})
+            async for text in reply:
+                yield event({"text": text})
+            yield event({"done": True})
+        except ai.TutorUnavailable as problem:
+            yield event({"error": problem.reason})
+        finally:
+            await reply.aclose()
+
+    return StreamingResponse(events(), media_type="application/x-ndjson",
+                             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})

@@ -1,5 +1,8 @@
 """AI tutor requests, always against the mocked provider."""
 import dataclasses
+import json
+
+import pytest
 
 
 async def test_chat_returns_the_provider_reply_for_guests(client, fake_ai):
@@ -22,11 +25,14 @@ async def test_chat_forwards_history_with_provider_roles(client, fake_ai):
     assert contents[-1].parts[0].text == "كيف حالك؟"
 
 
-async def test_chat_system_prompt_requires_arabic_and_adds_unit_vocabulary(client, fake_ai, content):
+async def test_chat_system_prompt_supports_both_languages_and_adds_unit_vocabulary(client, fake_ai, content):
     await client.post("/api/chat", json={
         "unit_id": content.unit_a, "messages": [{"role": "user", "content": "مرحبا"}]})
     prompt = fake_ai.calls[0].config.system_instruction
     assert "العربية الفصحى" in prompt
+    assert "المحادثة متاحة بالعربية والتركية" in prompt
+    assert "أجب بلغة سؤال الطالب الأخير" in prompt
+    assert "لا تضفه لكل رد" in prompt
     assert "التَّحِيَّة" in prompt and "كِتَاب" in prompt
 
     await client.post("/api/chat", json={"messages": [{"role": "user", "content": "مرحبا"}]})
@@ -76,3 +82,47 @@ async def test_chat_without_an_api_key_says_so_and_calls_nobody(client, fake_ai,
     monkeypatch.setattr(ai_service, "settings", dataclasses.replace(ai_service.settings, google_api_key=""))
     res = await client.post("/api/chat", json={"messages": [{"role": "user", "content": "مرحبا"}]})
     assert res.status_code == 503 and fake_ai.calls == []
+
+
+async def test_stream_delivers_arabic_chunks_and_completion(client, fake_ai):
+    res = await client.post('/api/chat/stream', json={'messages': [{'role': 'user', 'content': 'مرحبا'}]})
+    assert res.status_code == 200
+    events = [json.loads(line) for line in res.text.splitlines()]
+    assert ''.join(event.get('text', '') for event in events) == fake_ai.reply
+    assert events[-1] == {'done': True}
+    assert res.headers['cache-control'] == 'no-store'
+
+
+@pytest.mark.parametrize('model,level,budget', [
+    ('gemini-3.5-flash-lite', 'minimal', None), ('gemini-2.5-flash', None, 0),
+    ('gemini-2.5-pro', None, None),
+])
+async def test_speed_config_for_supported_models(client, fake_ai, monkeypatch, model, level, budget):
+    from ._app import ai_service
+
+    monkeypatch.setattr(ai_service, 'settings', dataclasses.replace(ai_service.settings, gemini_model=model))
+    res = await client.post('/api/chat/stream', json={'messages': [{'role': 'user', 'content': 'مرحبا'}]})
+    assert res.status_code == 200
+    config = fake_ai.calls[0].config
+    assert config.max_output_tokens == 256
+    if level is None and budget is None:
+        assert config.thinking_config is None
+    else:
+        assert config.thinking_config.thinking_level == (level.upper() if level else None)
+        assert config.thinking_config.thinking_budget == budget
+
+
+async def test_stream_errors_before_and_after_first_chunk(client, fake_ai, monkeypatch):
+    from ._app import ai_service
+
+    fake_ai.error = RuntimeError('provider details must remain private')
+    res = await client.post('/api/chat/stream', json={'messages': [{'role': 'user', 'content': 'مرحبا'}]})
+    assert res.status_code == 503 and 'provider details' not in res.text
+
+    async def broken(*args):
+        yield 'أهلًا'
+        raise ai_service.TutorUnavailable('انقطع الاتصال')
+    monkeypatch.setattr(ai_service, 'stream_reply', broken)
+    res = await client.post('/api/chat/stream', json={'messages': [{'role': 'user', 'content': 'مرحبا'}]})
+    events = [json.loads(line) for line in res.text.splitlines()]
+    assert events == [{'text': 'أهلًا'}, {'error': 'انقطع الاتصال'}]
