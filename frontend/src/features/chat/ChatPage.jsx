@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { streamReply } from './streamReply';
+import { textDirection } from './textDirection';
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([
-    { role: "model", content: "اسألني بالعربية أو التركية. Arapça veya Türkçe sorabilirsin." }
+    { role: "model", content: "اسألني بالعربية أو التركية.\nArapça veya Türkçe sorabilirsin." }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,7 +62,12 @@ export default function ChatPage() {
               <div style={{width:"32px",height:"32px",borderRadius:"50%",background:"#1a2744",color:"#C9A84C",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:"700",flexShrink:0}}>م</div>
             )}
             <div style={{maxWidth:"75%",padding:"0.75rem 1rem",borderRadius:"16px",fontSize:"15px",lineHeight:"1.7",background:msg.role==="user"?"#1a2744":"#fff",color:msg.role==="user"?"#F5F0E8":"#222",border:msg.role==="model"?"1px solid #e8e0d0":"none"}}>
-              {msg.content}
+              {msg.content.split('\n').map((paragraph, line) => (
+                <p key={line} dir={textDirection(paragraph)} style={{
+                  textAlign: 'start', unicodeBidi: 'isolate', whiteSpace: 'pre-wrap',
+                  overflowWrap: 'anywhere', minHeight: paragraph ? undefined : '0.6em',
+                }}>{paragraph}</p>
+              ))}
             </div>
           </div>
         ))}

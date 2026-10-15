@@ -39,6 +39,17 @@ async def test_chat_system_prompt_supports_both_languages_and_adds_unit_vocabula
     assert "كِتَاب" not in fake_ai.calls[1].config.system_instruction
 
 
+async def test_large_history_has_a_character_budget_without_truncating_question(client, fake_ai):
+    history = [{'role': 'user' if i % 2 == 0 else 'model', 'content': 'س' * 3900} for i in range(7)]
+    history.append({'role': 'user', 'content': 'ما معنى كتاب؟'})
+    res = await client.post('/api/chat/stream', json={'messages': history})
+    assert res.status_code == 200
+    contents = fake_ai.calls[0].contents
+    assert sum(len(c.parts[0].text) for c in contents) <= 6000
+    assert contents[-1].parts[0].text == 'ما معنى كتاب؟'
+    assert contents[-2].parts[0].text == 'س' * 3900
+
+
 async def test_chat_reports_provider_failure_as_service_error(client, fake_ai):
     fake_ai.error = RuntimeError("quota exceeded")
     res = await client.post("/api/chat", json={"messages": [{"role": "user", "content": "مرحبا"}]})
