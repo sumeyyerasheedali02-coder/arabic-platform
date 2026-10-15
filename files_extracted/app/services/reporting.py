@@ -4,7 +4,16 @@ from datetime import datetime, timedelta
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Exercise, ExerciseAnswer, Lesson, Student, StudentProgress, Unit
+from app.models import (
+    ActivityClock,
+    ActivitySession,
+    Exercise,
+    ExerciseAnswer,
+    Lesson,
+    Student,
+    StudentProgress,
+    Unit,
+)
 from app.schemas import StudentSummary, UnitStats
 
 COMPLETED = "completed"
@@ -32,16 +41,18 @@ async def student_summaries(
         scope = scope.where(Student.id == student_id)
     lesson_total = select(func.count(Lesson.id)).scalar_subquery()
     students = (await db.execute(
-        select(Student, lesson_total).where(Student.id.in_(scope))
+        select(Student, lesson_total, ActivityClock)
+        .outerjoin(ActivityClock, ActivityClock.student_id == Student.id).where(Student.id.in_(scope))
         .order_by(Student.created_at.desc(), Student.id.desc())
     )).all()
     progress = {
-        sid: (done, active)
-        for sid, done, active in (await db.execute(select(
+        sid: (done, active, seconds)
+        for sid, done, active, seconds in (await db.execute(select(
             StudentProgress.student_id,
             func.count(func.distinct(case(
                 (StudentProgress.status == COMPLETED, StudentProgress.lesson_id), else_=None))),
             func.max(StudentProgress.updated_at),
+            func.sum(StudentProgress.time_spent_sec),
         ).where(StudentProgress.student_id.in_(scope)).group_by(StudentProgress.student_id))).all()
     }
     answers = {
@@ -61,12 +72,14 @@ async def student_summaries(
     points = dict((await db.execute(select(best.c.student_id, func.sum(best.c.points))
                                     .group_by(best.c.student_id))).all())
     result = []
-    for student, total_lessons in students:
-        done, progress_active = progress.get(student.id, (0, None))
+    for student, total_lessons, clock in students:
+        done, progress_active, legacy_seconds = progress.get(student.id, (0, None, 0))
         count, correct, answer_active = answers.get(student.id, (0, 0, None))
-        activity = [t for t in (student.last_login, progress_active, answer_active) if t is not None]
+        activity = [t for t in (student.last_login, progress_active, answer_active,
+                               clock.updated_at if clock else None) if t is not None]
         result.append(StudentSummary(
             student_id=student.id, name=student.name, email=student.email,
+            active_time_sec=(clock.total_ms // 1000 if clock else 0) + (legacy_seconds or 0),
             student_number=student.student_number,
             class_section=student.class_section, total_score=points.get(student.id) or 0,
             lessons_done=done, completion_pct=completion_percent(done, 1, total_lessons),
@@ -121,6 +134,19 @@ async def student_details(db: AsyncSession, student_id: int) -> dict:
       .order_by(Unit.unit_number, Lesson.lesson_number))).mappings().all()
     lessons = [dict(row, status="completed" if row["completed"] else
                     "in_progress" if row["attempts"] else "not_started") for row in rows]
+    lesson_times = {lesson_id: (milliseconds, last_seen) for lesson_id, milliseconds, last_seen in
+                   (await db.execute(select(
+        ActivitySession.lesson_id, func.sum(ActivitySession.accepted_ms),
+        func.max(ActivitySession.updated_at),
+    ).where(ActivitySession.student_id == student_id, ActivitySession.lesson_id.is_not(None))
+      .group_by(ActivitySession.lesson_id))).all()}
+    for lesson in lessons:
+        milliseconds, last_seen = lesson_times.get(lesson["id"], (0, None))
+        lesson["time_spent_sec"] = (lesson["time_spent_sec"] or 0) + milliseconds // 1000
+        if last_seen and milliseconds:
+            lesson["updated_at"] = max(t for t in (last_seen, lesson["updated_at"]) if t is not None)
+        if lesson["status"] == "not_started" and milliseconds:
+            lesson["status"] = "in_progress"
     day = func.date(ExerciseAnswer.answered_at)
     history = (await db.execute(select(
         day.label("date"), func.count(ExerciseAnswer.id).label("answers"),

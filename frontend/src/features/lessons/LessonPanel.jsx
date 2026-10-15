@@ -9,6 +9,7 @@ import { DialogueBubbles, DialogueScript } from './DialogueViews'
 import GrammarRules from './GrammarRules'
 import { VocabularyList } from './VocabularyRow'
 import { lessonColor, lessonLabel } from './lessonTypes'
+import { useLessonActivity } from '../activity/useLessonActivity'
 
 const TABS = [
   { key: 'lessons', label: 'الدروس' },
@@ -219,6 +220,7 @@ function VocabularyTab({ words }) {
  * Mount it with `key={lesson.id}` so each lesson starts on its own default tab.
  */
 export default function LessonPanel({ lesson, unitVocab, onClose }) {
+  useLessonActivity(lesson?.id)
   const [tab, setTab] = useState(() => defaultTab(lesson))
   const [closing, setClosing] = useState(false)
   const requestClose = useCallback(() => setClosing(true), [])

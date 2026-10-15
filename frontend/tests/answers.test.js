@@ -28,3 +28,18 @@ test('the order of combining marks does not matter', () => {
   assert.notEqual(shaddaFirst, kasraFirst)
   assert.ok(isCorrectAnswer(shaddaFirst, kasraFirst))
 })
+
+test('initial alef variants are accepted in every word, including decomposed Unicode', () => {
+  for (const [given, expected] of [
+    ['انا', 'أَنَا'], ['الى', 'إِلَى'], ['آنا', 'أَنَا'], ['ٱسم', 'اسم'],
+    ['انا اذهب الى احمد', 'أَنَا أَذْهَبُ إِلَى أَحْمَد'],
+    ['(الى) احمد', '(إِلَى) أَحْمَد'], ['ا\u0655لى', 'إِلَى'],
+    ['سا\u0654ل', 'سَأَلَ'], ['هذا', 'هَٰذَا'],
+  ]) assert.ok(isCorrectAnswer(given, expected), given)
+})
+
+test('different letters and noninitial hamza remain significant', () => {
+  for (const [given, expected] of [
+    ['سال', 'سَأَلَ'], ['بدا', 'بَدَأَ'], ['على', 'إِلَى'],
+  ]) assert.equal(isCorrectAnswer(given, expected), false)
+})

@@ -6,6 +6,7 @@ import { useUnits } from "../units/useUnits";
 import { useAuth } from "../../auth/useAuth";
 import { DialogueScript } from "./DialogueViews";
 import GrammarRules from "./GrammarRules";
+import { useLessonActivity } from '../activity/useLessonActivity';
 
 const TABS = [{key:"vocabulary",label:"المفردات"},{key:"content",label:"الدرس"},{key:"exercises",label:"التمارين"}];
 
@@ -31,6 +32,7 @@ export default function LessonDetailPage() {
   const { student } = useAuth();
   const { units, selectUnit } = useUnits();
   const { data, loading } = useApiData(`lesson:${lessonId}`, () => loadLesson(lessonId));
+  useLessonActivity(data?.lesson.id);
   const [activeTab, setActiveTab] = useState("vocabulary");
   const [playingWord, setPlayingWord] = useState(null);
 

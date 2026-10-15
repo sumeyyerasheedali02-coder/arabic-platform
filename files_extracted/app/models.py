@@ -1,6 +1,7 @@
 """ORM models. Table and column names are part of the deployed database schema."""
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     CheckConstraint,
     Column,
@@ -16,6 +17,23 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.database import Base
+
+
+class ActivityClock(Base):
+    __tablename__ = "student_activity_clocks"
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)
+    total_ms = Column(BigInteger, nullable=False, default=0)
+    updated_at = Column(DateTime, nullable=False)
+
+
+class ActivitySession(Base):
+    __tablename__ = "student_activity_sessions"
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)
+    session_id = Column(String(36), primary_key=True)
+    lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="SET NULL"), nullable=True)
+    reported_ms = Column(Integer, nullable=False, default=0)
+    accepted_ms = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime, nullable=False)
 
 
 # ─────────────────────────────────────────

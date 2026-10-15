@@ -28,6 +28,24 @@ async def test_answer_check_ignores_diacritics_case_and_outer_spaces(client, reg
     assert upper.json()["is_correct"] is True
 
 
+async def test_unvocalised_initial_hamza_answer_earns_points_and_preserves_text(
+    client, register, content, db,
+):
+    student = await register()
+    exercise = await db.get(models.Exercise, content.ex_blank)
+    exercise.correct_answer = "أَنَا أَذْهَبُ إِلَى أَحْمَد"
+    await db.commit()
+    response = await client.post("/api/exercises/submit", headers=student.headers, json={
+        "exercise_id": content.ex_blank, "student_answer": "انا اذهب الى احمد"})
+    assert response.status_code == 200
+    assert response.json()["is_correct"] is True
+    assert response.json()["points_earned"] == exercise.points
+    assert response.json()["correct_answer"] == "أَنَا أَذْهَبُ إِلَى أَحْمَد"
+    recorded = (await db.execute(select(models.ExerciseAnswer).where(
+        models.ExerciseAnswer.student_id == student.id))).scalar_one()
+    assert recorded.student_answer == "انا اذهب الى احمد"
+
+
 async def test_wrong_answer_earns_nothing_and_reveals_solution(client, register, content):
     student = await register()
     res = await client.post("/api/exercises/submit", headers=student.headers, json={

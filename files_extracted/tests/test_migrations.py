@@ -14,6 +14,28 @@ EXPECTED_INDEXES = {
 }
 
 
+async def test_activity_upgrade_preserves_existing_accounts_and_progress(tmp_path):
+    old = create_async_engine(f"sqlite+aiosqlite:///{(tmp_path / 'before_activity.db').as_posix()}")
+    try:
+        async with old.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            await apply_migrations(conn)
+            await conn.execute(text("DELETE FROM schema_migrations WHERE id = '0007_student_active_time'"))
+            await conn.execute(text("DROP TABLE student_activity_sessions"))
+            await conn.execute(text("DROP TABLE student_activity_clocks"))
+            await conn.execute(text(
+                "INSERT INTO students (id, name, email, password_hash) VALUES (19, 'Keep', 'keep@example.com', 'keep-hash')"))
+            await conn.execute(text(
+                "INSERT INTO student_progress (student_id, score, attempts, time_spent_sec) VALUES (19, 12, 3, 45)"))
+            assert await apply_migrations(conn) == ["0007_student_active_time"]
+            assert await apply_migrations(conn) == []
+            assert (await conn.execute(text("SELECT password_hash FROM students WHERE id=19"))).scalar() == "keep-hash"
+            assert (await conn.execute(text("SELECT score, attempts, time_spent_sec FROM student_progress"))).one() == (12, 3, 45)
+            assert (await conn.execute(text("SELECT COUNT(*) FROM student_activity_clocks"))).scalar() == 0
+    finally:
+        await old.dispose()
+
+
 def _index_names(sync_conn, table):
     return {index["name"] for index in inspect(sync_conn).get_indexes(table)}
 
