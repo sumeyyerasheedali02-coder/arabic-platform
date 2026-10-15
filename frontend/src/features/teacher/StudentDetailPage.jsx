@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import api from '../../api/client'
 import { useStaffApiData } from '../staff/useStaffApiData'
@@ -7,6 +7,7 @@ import { CenteredSpinner } from '../../components/Spinner'
 import { CompletionBar, StaffMessage, StaffStats } from './StaffUi'
 import { apiError, formatDate } from './staffFormat'
 import { useStaff } from '../staff/useStaff'
+import { formatStudyTime } from '../activity/activeClock'
 
 const STATUS = { completed: 'مكتمل', in_progress: 'قيد التعلّم', not_started: 'لم يبدأ' }
 
@@ -50,6 +51,13 @@ export default function StudentDetailPage() {
   const report = useStaffApiData(`student-detail:${account.id}:${studentId}`,
     () => api.get(`/teacher/students/${studentId}`).then(r => r.data))
   const [onlyStarted, setOnlyStarted] = useState(false)
+  const refreshReport = report.reload
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') refreshReport()
+    }, 30_000)
+    return () => clearInterval(timer)
+  }, [refreshReport])
   const studentsPath = location.state?.backTo || (account.is_admin ? '/admin/students' : '/teacher/students')
   if (report.loading) return <CenteredSpinner size={32} height={260} />
   if (report.error) return <div className="staff-page">
@@ -73,6 +81,7 @@ export default function StudentDetailPage() {
       ['دقة الإجابات', student.accuracy_pct == null ? '—' : student.accuracy_pct + '%'],
       ['أفضل نقاط التمارين', student.total_score],
       ['عدد الإجابات', student.answers_count],
+      ['وقت الاستخدام الفعلي', formatStudyTime(student.active_time_sec)],
     ]} />
     {account.is_admin && <SectionCorrection key={student.student_id} student={student}
       onSaved={() => { report.reload(); sections.reload() }} />}
@@ -87,13 +96,14 @@ export default function StudentDetailPage() {
           <td>{l.title_ar}<div className="staff-secondary">{l.unit_number}. {l.unit_title}</div></td>
           <td><span className={`staff-badge ${l.status === 'not_started' ? 'inactive' : ''}`}>{STATUS[l.status]}</span></td>
           <td>{l.score ?? 0}</td><td>{l.attempts ?? 0}</td>
-          <td>{Math.round((l.time_spent_sec ?? 0) / 60)} دقيقة</td><td>{formatDate(l.updated_at)}</td>
+          <td>{formatStudyTime(l.time_spent_sec)}</td><td>{formatDate(l.updated_at)}</td>
         </tr>)}
         {!visible.length && <tr><td colSpan={6} className="staff-empty">لم يبدأ الطالب أي درس بعد.</td></tr>}
         </tbody>
       </table></div>
       <p className="staff-intro" style={{ margin: '14px 0 0' }}>
         الإتمام يعكس جلسات التدريب المسجلة. دقة الإجابات مؤشر مستقل لنتائج التمارين.
+        {' '}الوقت يُحفظ كل 15 ثانية أثناء ظهور الصفحة؛ يتوقف عند مغادرتها أو بعد 90 ثانية دون تفاعل. القياس الجديد يبدأ من تاريخ تفعيله.
       </p>
     </section>
     <section className="staff-panel">

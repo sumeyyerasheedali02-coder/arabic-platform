@@ -10,6 +10,7 @@ import ExerciseCard from './ExerciseCard'
 import SessionSummary from './SessionSummary'
 import { FILTER_OPTIONS, matchesFilter } from './filters'
 import { correctCount, scoresByLesson, successRate, totalPoints } from './session'
+import { useLessonActivity } from '../activity/useLessonActivity'
 
 const NO_EXERCISES = []
 const newSession = (key) => ({ key, current: 0, results: [], done: false })
@@ -38,6 +39,7 @@ export default function ExercisesPage() {
   const [session, setSession] = useState(() => newSession(sessionKey))
   if (session.key !== sessionKey) setSession(newSession(sessionKey))
   const { current, results, done } = session.key === sessionKey ? session : newSession(sessionKey)
+  useLessonActivity(!done && !query.loading ? exercises[current]?.lesson_id : null)
 
   const handleAnswer = (result) => setSession(s => ({ ...s, results: [...s.results, result] }))
 

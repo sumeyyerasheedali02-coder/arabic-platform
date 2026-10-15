@@ -7,6 +7,7 @@ import { UnitsProvider } from '../features/units/UnitsProvider'
 import StaffProvider from '../features/staff/StaffProvider'
 import Header from './Header'
 import Sidebar from './Sidebar'
+import ActivityTracker from '../features/activity/ActivityTracker'
 
 /**
  * Sidebar + header + scrolling main area shared by every page inside the app.
@@ -30,6 +31,7 @@ export default function AppLayout() {
   }
   return (
     <StaffProvider>
+    <ActivityTracker />
     <UnitsProvider active={!isStaff || location.pathname.startsWith('/content')}>
       <ProgressProvider>
         <div className="app-grid">

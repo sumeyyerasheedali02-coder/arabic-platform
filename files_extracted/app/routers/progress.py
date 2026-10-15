@@ -1,19 +1,79 @@
 """A student's own lesson progress."""
 from datetime import datetime
 from typing import List, Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import func, select
+from pydantic import BaseModel, Field
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Exercise, ExerciseAnswer, Lesson, StudentProgress
+from app.models import (
+    ActivityClock,
+    ActivitySession,
+    Exercise,
+    ExerciseAnswer,
+    Lesson,
+    Student,
+    StudentProgress,
+)
 from app.schemas import ProgressOut
 from app.security import get_current_student
 
 router = APIRouter(prefix="/api/me/progress", tags=["progress"])
 
 ProgressStatus = Literal["not_started", "in_progress", "completed"]
+
+
+class ActivityPing(BaseModel):
+    session_id: UUID
+    active_ms: int = Field(ge=0, le=2_000_000_000)
+    lesson_id: int | None = Field(default=None, gt=0)
+
+
+@router.post("/activity")
+async def record_activity(
+    ping: ActivityPing, student_id: int = Depends(get_current_student),
+    db: AsyncSession = Depends(get_db),
+):
+    # Serialize all of this student's tabs/devices. No progress scores,
+    # completion flags or practice-attempt counters are changed by a timer.
+    if db.bind.dialect.name == "sqlite":
+        # SQLite ignores FOR UPDATE; acquire its writer lock before reading.
+        await db.execute(update(Student).where(Student.id == student_id).values(id=Student.id))
+    account = (await db.execute(select(Student).where(Student.id == student_id)
+                               .with_for_update())).scalar_one()
+    if account.role != "student":
+        raise HTTPException(403, "تسجيل الوقت مخصص للطلاب")
+    if ping.lesson_id is not None and await db.get(Lesson, ping.lesson_id) is None:
+        raise HTTPException(404, "الدرس غير موجود")
+    now = datetime.utcnow()
+    clock = await db.get(ActivityClock, student_id)
+    if clock is None:
+        clock = ActivityClock(student_id=student_id, total_ms=0, updated_at=now)
+        db.add(clock)
+    session = await db.get(ActivitySession, (student_id, str(ping.session_id)))
+    if session is None:
+        session = ActivitySession(student_id=student_id, session_id=str(ping.session_id),
+                                  lesson_id=ping.lesson_id, reported_ms=ping.active_ms,
+                                  accepted_ms=0, updated_at=now)
+        db.add(session)
+    elif session.lesson_id != ping.lesson_id:
+        raise HTTPException(409, "ابدأ جلسة جديدة عند تغيير الدرس")
+    elif ping.active_ms > session.reported_ms:
+        # Cumulative acknowledgements make retries/out-of-order requests harmless.
+        # Server elapsed time also bounds concurrent tabs and fabricated durations.
+        elapsed = max(0, int((now - clock.updated_at).total_seconds() * 1000))
+        delta = min(ping.active_ms - session.reported_ms, elapsed, 60_000)
+        session.reported_ms = ping.active_ms
+        session.accepted_ms += delta
+        if delta:
+            session.updated_at = now
+        clock.total_ms += delta
+        clock.updated_at = now
+    await db.commit()
+    return {"recorded_ms": session.accepted_ms}
 
 
 @router.get("/summary")

@@ -267,6 +267,7 @@ class SRSCardOut(BaseModel):
 
 # ── Dashboard (للأستاذ) ───────────────────
 class StudentSummary(BaseModel):
+    active_time_sec: int = 0
     student_id:      int
     name:            str
     email:           str
