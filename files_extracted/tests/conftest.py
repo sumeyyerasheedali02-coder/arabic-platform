@@ -204,13 +204,23 @@ class FakeAI:
         self.calls = []
         self.reply = "أَحْسَنْتَ! جملة التدريب: اسمي خالد."
         self.error = None
-        self.aio = SimpleNamespace(models=SimpleNamespace(generate_content=self._generate))
+        self.aio = SimpleNamespace(models=SimpleNamespace(
+            generate_content=self._generate, generate_content_stream=self._stream))
 
     async def _generate(self, *, model, contents, config):
         self.calls.append(SimpleNamespace(model=model, contents=contents, config=config))
         if self.error:
             raise self.error
         return SimpleNamespace(text=self.reply)
+
+    async def _stream(self, **kwargs):
+        await self._generate(**kwargs)
+
+        async def chunks():
+            if self.reply:
+                yield SimpleNamespace(text=self.reply[:4])
+                yield SimpleNamespace(text=self.reply[4:])
+        return chunks()
 
 
 @pytest.fixture

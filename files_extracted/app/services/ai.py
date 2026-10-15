@@ -1,5 +1,7 @@
 """The Arabic tutor: prompt construction and the call to Google Gemini."""
+import asyncio
 import logging
+import time
 from typing import Sequence
 
 from google import genai
@@ -14,9 +16,8 @@ logger = logging.getLogger(__name__)
 _client = None
 
 UNIT_VOCABULARY_LIMIT = 30
-# The client resends the whole conversation with every message. Only the most
-# recent part is passed on, so a long chat cannot grow the request without limit.
-MAX_HISTORY_MESSAGES = 40
+# Keep a small recent context even when older clients send their full history.
+MAX_HISTORY_MESSAGES = 8
 
 
 class TutorUnavailable(Exception):
@@ -32,7 +33,8 @@ def get_client():
     """Create the provider client on first use (tests replace this function)."""
     global _client
     if _client is None:
-        _client = genai.Client(api_key=settings.google_api_key)
+        _client = genai.Client(api_key=settings.google_api_key,
+                               http_options=genai_types.HttpOptions(timeout=20000))
     return _client
 
 
@@ -41,7 +43,7 @@ def build_unit_context(title_ar: str, title_tr: str, words: Sequence[str]) -> st
     return f"""
 الوحدة الحالية: {title_ar} ({title_tr})
 المفردات المستهدفة في هذه الوحدة: {vocab_list}
-استخدم هذه المفردات في ردودك قدر الإمكان.
+استخدم هذه المفردات عندما تناسب السؤال، دون إقحامها أو إطالة الرد.
 """
 
 
@@ -49,16 +51,40 @@ def build_system_prompt(unit_context: str = "") -> str:
     return f"""أنت مساعد لتعليم اللغة العربية لطالب تركي يدرس في كلية الإلهيات.
 
 قواعد صارمة:
-1. تحدث بالعربية الفصحى فقط في جميع ردودك
-2. إذا أخطأ الطالب في الإعراب أو المفردات، صحح الخطأ بلطف
-3. استخدم جملاً بسيطة ومفهومة تناسب المستوى الأول
-4. إذا كتب الطالب بالتركية، رد عليه بالعربية وأخبره بلطف أن يحاول بالعربية
-5. شجع الطالب وكن إيجابياً دائماً
-6. في نهاية كل رد، اقترح جملة تدريبية واحدة للطالب
+1. المحادثة متاحة بالعربية والتركية. أجب بلغة سؤال الطالب الأخير، واتبع اللغة التي يطلبها صراحةً
+2. عند استخدام العربية، استخدم العربية الفصحى البسيطة. وعند استخدام التركية، استخدم تركية يومية سهلة
+3. أجب مباشرة وعلى قدر السؤال، بأقل كلمات تكفي لإجابة صحيحة وواضحة. غالبًا تكفي جملة أو جملتان
+4. لا مقدمات ولا تحيات متكررة ولا مدح ولا تلخيص ولا سؤال متابعة أو تمرين تلقائي
+5. استخدم كلمات مألوفة وجملاً قصيرة. تجنب المصطلحات الصعبة والشرح الزائد
+6. أضف مثالًا واحدًا قصيرًا فقط إذا طلبه الطالب أو كان ضروريًا لفهم الإجابة. لا تضفه لكل رد
+7. عند شرح كلمة عربية بالتركية، اذكر الكلمة العربية وترجمتها باختصار. لا تكرر الرد كاملًا باللغتين إلا بطلب
+8. إذا كان السؤال مختلط اللغة، اتبع لغة الشرح المطلوبة أو اللغة الغالبة فيه. لا تطلب من الطالب ترك التركية
+9. صحح الخطأ اللغوي المقصود بالسؤال بلطف وباختصار، دون تشتيت الإجابة بتصحيحات جانبية
+10. إذا احتاج السؤال تفصيلًا أو طلبه الطالب، أعطِ القدر الضروري فقط دون حشو
 
 {unit_context}
 
 تذكر: هدفك هو مساعدة الطالب على التواصل بالعربية بشكل طبيعي."""
+
+
+def reply_config() -> genai_types.GenerateContentConfig:
+    config = genai_types.GenerateContentConfig(
+        temperature=0.5, max_output_tokens=256,
+    )
+    # Gemini 3 Flash supports minimal; 2.5 Flash supports disabling thinking.
+    model = settings.gemini_model
+    if model.startswith("gemini-3") and "flash" in model:
+        config.thinking_config = genai_types.ThinkingConfig(thinking_level="minimal")
+    elif model.startswith("gemini-2.5-flash"):
+        config.thinking_config = genai_types.ThinkingConfig(thinking_budget=0)
+    return config
+
+
+def request_contents(messages: Sequence[ChatMessage]):
+    return [genai_types.Content(
+        role="user" if message.role == "user" else "model",
+        parts=[genai_types.Part(text=message.content)],
+    ) for message in messages[-MAX_HISTORY_MESSAGES:]]
 
 
 async def generate_reply(messages: Sequence[ChatMessage], unit_context: str = "") -> str:
@@ -70,22 +96,12 @@ async def generate_reply(messages: Sequence[ChatMessage], unit_context: str = ""
     if not settings.google_api_key:
         raise TutorUnavailable("المساعد الذكي غير مفعّل على هذا الخادم")
 
-    contents = [
-        genai_types.Content(
-            # The provider only knows "user" and "model".
-            role="user" if message.role == "user" else "model",
-            parts=[genai_types.Part(text=message.content)],
-        )
-        for message in messages[-MAX_HISTORY_MESSAGES:]
-    ]
+    config = reply_config()
+    config.system_instruction = build_system_prompt(unit_context)
     try:
         response = await get_client().aio.models.generate_content(
             model=settings.gemini_model,
-            contents=contents,
-            config=genai_types.GenerateContentConfig(
-                system_instruction=build_system_prompt(unit_context),
-                temperature=0.7,
-            ),
+            contents=request_contents(messages), config=config,
         )
         reply = (response.text or "").strip()
     except Exception:
@@ -96,3 +112,36 @@ async def generate_reply(messages: Sequence[ChatMessage], unit_context: str = ""
         # e.g. the provider withheld the answer
         raise TutorUnavailable("لم يصل رد من المساعد، حاول صياغة رسالتك بشكل آخر", status_code=502)
     return reply
+
+
+async def stream_reply(messages: Sequence[ChatMessage], unit_context: str = ""):
+    if not settings.google_api_key:
+        raise TutorUnavailable("المساعد الذكي غير مفعّل على هذا الخادم")
+    config = reply_config()
+    config.system_instruction = build_system_prompt(unit_context)
+    received = False
+    started = time.perf_counter()
+    try:
+        deadline = asyncio.get_running_loop().time() + 30
+        response = await asyncio.wait_for(get_client().aio.models.generate_content_stream(
+            model=settings.gemini_model, contents=request_contents(messages), config=config), timeout=20)
+        try:
+            while True:
+                remaining = max(0.01, deadline - asyncio.get_running_loop().time())
+                try:
+                    chunk = await asyncio.wait_for(anext(response), timeout=remaining)
+                except StopAsyncIteration:
+                    break
+                if chunk.text:
+                    if not received:
+                        logger.info("Tutor first text arrived in %.2fs", time.perf_counter() - started)
+                    received = True
+                    yield chunk.text
+        finally:
+            await response.aclose()
+    except Exception:
+        logger.exception("The streamed tutor request failed")
+        raise TutorUnavailable("تأخر المساعد أو تعذّر الاتصال به، حاول مجددًا") from None
+    if not received:
+        raise TutorUnavailable("لم يصل رد من المساعد، حاول صياغة رسالتك بشكل آخر", status_code=502)
+    logger.info("Tutor reply completed in %.2fs", time.perf_counter() - started)
