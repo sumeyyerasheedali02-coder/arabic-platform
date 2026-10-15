@@ -18,6 +18,7 @@ _client = None
 UNIT_VOCABULARY_LIMIT = 30
 # Keep a small recent context even when older clients send their full history.
 MAX_HISTORY_MESSAGES = 8
+MAX_HISTORY_CHARACTERS = 6000
 
 
 class TutorUnavailable(Exception):
@@ -34,7 +35,8 @@ def get_client():
     global _client
     if _client is None:
         _client = genai.Client(api_key=settings.google_api_key,
-                               http_options=genai_types.HttpOptions(timeout=20000))
+                               http_options=genai_types.HttpOptions(
+                                   timeout=20000, retry_options=genai_types.HttpRetryOptions(attempts=1)))
     return _client
 
 
@@ -48,23 +50,13 @@ def build_unit_context(title_ar: str, title_tr: str, words: Sequence[str]) -> st
 
 
 def build_system_prompt(unit_context: str = "") -> str:
-    return f"""أنت مساعد لتعليم اللغة العربية لطالب تركي يدرس في كلية الإلهيات.
-
-قواعد صارمة:
-1. المحادثة متاحة بالعربية والتركية. أجب بلغة سؤال الطالب الأخير، واتبع اللغة التي يطلبها صراحةً
-2. عند استخدام العربية، استخدم العربية الفصحى البسيطة. وعند استخدام التركية، استخدم تركية يومية سهلة
-3. أجب مباشرة وعلى قدر السؤال، بأقل كلمات تكفي لإجابة صحيحة وواضحة. غالبًا تكفي جملة أو جملتان
-4. لا مقدمات ولا تحيات متكررة ولا مدح ولا تلخيص ولا سؤال متابعة أو تمرين تلقائي
-5. استخدم كلمات مألوفة وجملاً قصيرة. تجنب المصطلحات الصعبة والشرح الزائد
-6. أضف مثالًا واحدًا قصيرًا فقط إذا طلبه الطالب أو كان ضروريًا لفهم الإجابة. لا تضفه لكل رد
-7. عند شرح كلمة عربية بالتركية، اذكر الكلمة العربية وترجمتها باختصار. لا تكرر الرد كاملًا باللغتين إلا بطلب
-8. إذا كان السؤال مختلط اللغة، اتبع لغة الشرح المطلوبة أو اللغة الغالبة فيه. لا تطلب من الطالب ترك التركية
-9. صحح الخطأ اللغوي المقصود بالسؤال بلطف وباختصار، دون تشتيت الإجابة بتصحيحات جانبية
-10. إذا احتاج السؤال تفصيلًا أو طلبه الطالب، أعطِ القدر الضروري فقط دون حشو
-
-{unit_context}
-
-تذكر: هدفك هو مساعدة الطالب على التواصل بالعربية بشكل طبيعي."""
+    return f"""أنت مرشد لتعلّم العربية للمبتدئين الأتراك.
+المحادثة متاحة بالعربية والتركية. أجب بلغة سؤال الطالب الأخير أو اللغة المطلوبة صراحةً؛
+للسؤال المختلط اتبع اللغة الغالبة. استخدم العربية الفصحى البسيطة أو التركية اليومية السهلة.
+أجب مباشرة بأقل كلمات تكفي، غالبًا جملة أو جملتين. لا مقدمات أو مدح أو حشو أو تمرين أو سؤال متابعة تلقائي.
+مثال قصير واحد عند طلبه أو الحاجة للفهم فقط؛ لا تضفه لكل رد. صحح الخطأ المقصود باختصار ولطف.
+لا تكرر الإجابة باللغتين إلا بطلب. للتفصيل المطلوب أعطِ القدر الضروري فقط.
+{unit_context}"""
 
 
 def reply_config() -> genai_types.GenerateContentConfig:
@@ -81,10 +73,18 @@ def reply_config() -> genai_types.GenerateContentConfig:
 
 
 def request_contents(messages: Sequence[ChatMessage]):
+    selected = []
+    characters = 0
+    for message in reversed(messages[-MAX_HISTORY_MESSAGES:]):
+        # Always preserve the latest question in full; drop older turns whole.
+        if selected and characters + len(message.content) > MAX_HISTORY_CHARACTERS:
+            break
+        selected.append(message)
+        characters += len(message.content)
     return [genai_types.Content(
         role="user" if message.role == "user" else "model",
         parts=[genai_types.Part(text=message.content)],
-    ) for message in messages[-MAX_HISTORY_MESSAGES:]]
+    ) for message in reversed(selected)]
 
 
 async def generate_reply(messages: Sequence[ChatMessage], unit_context: str = "") -> str:
