@@ -14,7 +14,7 @@ Backend (from `files_extracted/`, Python 3.12, virtualenv in `.venv`):
 
 ```bash
 uvicorn main:app --reload --port 8000
-pytest -q                 # 100 tests, throw-away SQLite database
+pytest -q                 # throw-away SQLite database
 ruff check .
 python -m tools.seed --help            # content loading
 python -m tools.migrate --status       # schema migrations

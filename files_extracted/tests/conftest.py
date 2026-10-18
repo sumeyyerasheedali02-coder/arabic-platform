@@ -22,6 +22,14 @@ async def _schema():
     await engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def _fresh_rate_limits():
+    """Every test sends from the same address; counts must not leak between tests."""
+    from app.services import rate_limit
+
+    rate_limit.reset_all()
+
+
 @pytest_asyncio.fixture(autouse=True)
 async def content(_schema):
     """Empty every table, then load a small deterministic content set."""

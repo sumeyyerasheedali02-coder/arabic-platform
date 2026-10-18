@@ -80,6 +80,7 @@ class Settings:
     smtp_password: str = ""
     smtp_from: str = ""
     password_reset_url: str = ""
+    client_ip_header: str = ""
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -100,6 +101,7 @@ class Settings:
             smtp_password=os.getenv("SMTP_PASSWORD", ""),
             smtp_from=os.getenv("SMTP_FROM", "").strip(),
             password_reset_url=os.getenv("PASSWORD_RESET_URL", "").strip(),
+            client_ip_header=os.getenv("CLIENT_IP_HEADER", "").strip().lower(),
         )
 
     def is_teacher_email(self, email: str | None) -> bool:

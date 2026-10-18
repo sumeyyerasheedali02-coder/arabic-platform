@@ -16,6 +16,7 @@ from app.models import Student
 settings = get_settings()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def is_teacher_email(email: str) -> bool:
@@ -48,34 +49,50 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
-async def get_current_account(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
-) -> Student:
-    """Return the account the token belongs to, or answer 401.
+async def _account_for_token(token: str, db: AsyncSession) -> Optional[Student]:
+    """The account a login token belongs to, or None.
 
-    The token must be valid, unexpired, carry a numeric subject, and that
-    account must still exist.
+    The token must be valid, unexpired, not a single-purpose token (password
+    reset), carry a numeric subject, and that account must still be active
+    with the same token version.
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="بيانات الاعتماد غير صالحة",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         if payload.get("purpose") is not None:
-            raise credentials_exception
+            return None
         # python-jose requires `sub` to be a string; ids are stored as str(id).
         student_id = int(payload.get("sub"))
     except (JWTError, TypeError, ValueError):
-        raise credentials_exception from None
+        return None
 
     student = (await db.execute(select(Student).where(Student.id == student_id))).scalar_one_or_none()
     if (student is None or not student.is_active
             or payload.get("ver", 0) != student.token_version):
-        raise credentials_exception
+        return None
     return student
+
+
+async def get_current_account(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> Student:
+    """Return the account the token belongs to, or answer 401."""
+    student = await _account_for_token(token, db)
+    if student is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="بيانات الاعتماد غير صالحة",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return student
+
+
+async def get_optional_account(
+    token: Optional[str] = Depends(optional_oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[Student]:
+    """For pages open to guests: the account, or None (also for a stale token)."""
+    return await _account_for_token(token, db) if token else None
 
 
 async def get_current_student(account: Student = Depends(get_current_account)) -> int:

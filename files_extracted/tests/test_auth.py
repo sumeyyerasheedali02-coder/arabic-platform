@@ -152,3 +152,42 @@ async def test_password_longer_than_bcrypt_accepts_is_rejected_not_a_server_erro
 
     student = await register()
     assert (await login(student.email, too_long)).status_code == 401
+
+
+async def test_repeated_failed_logins_lock_that_identifier_only(register, login, monkeypatch):
+    from app.routers import auth
+
+    monkeypatch.setattr(auth, "FAILED_LOGINS_PER_ACCOUNT", 3)
+    target, other = await register(), await register()
+    for _ in range(3):
+        assert (await login(target.email.upper(), "wrong-password")).status_code == 401
+    # Locked even with the right password, whatever the spelling of the address.
+    assert (await login(target.email, target.password)).status_code == 429
+    assert (await login(f"  {target.email}  ", "wrong-password")).status_code == 429
+    assert (await login(other.email, other.password)).status_code == 200
+
+
+async def test_failed_logins_from_one_address_are_limited(register, login, new_email, monkeypatch):
+    from app.routers import auth
+
+    monkeypatch.setattr(auth, "FAILED_LOGINS_PER_ADDRESS", 4)
+    student = await register()
+    for _ in range(4):
+        assert (await login(new_email(), "wrong-password")).status_code == 401
+    assert (await login(student.email, student.password)).status_code == 429
+
+
+async def test_successful_logins_are_not_limited(register, login):
+    student = await register()
+    for _ in range(15):
+        assert (await login(student.email, student.password)).status_code == 200
+
+
+async def test_student_number_spellings_share_one_failure_count(register, login, monkeypatch):
+    from app.routers import auth
+
+    monkeypatch.setattr(auth, "FAILED_LOGINS_PER_ACCOUNT", 2)
+    student = await register(student_number="12345")
+    assert (await login("12345", "wrong-password")).status_code == 401
+    assert (await login("١٢٣٤٥", "wrong-password")).status_code == 401
+    assert (await login("12345", student.password)).status_code == 429

@@ -104,6 +104,17 @@ async def _add_activity_tables(conn: AsyncConnection) -> None:
         await conn.run_sync(lambda sync, table=model.__table__: table.create(sync, checkfirst=True))
 
 
+async def _unique_srs_cards(conn: AsyncConnection) -> None:
+    await conn.execute(text(
+        "DELETE FROM srs_cards WHERE id NOT IN "
+        "(SELECT MIN(id) FROM srs_cards GROUP BY student_id, vocabulary_id)"))
+    await conn.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_srs_cards_student_vocabulary "
+        "ON srs_cards (student_id, vocabulary_id)"))
+    # Same columns as the unique index; no longer needed.
+    await conn.execute(text("DROP INDEX IF EXISTS ix_srs_cards_student_vocabulary"))
+
+
 MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     # Lookups by student were full table scans. Measured on SQLite with 300
     # students: the due-cards query 9.1 ms -> 0.05 ms, a card lookup
@@ -120,6 +131,10 @@ MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     ("0005_legacy_section_compatibility", align_legacy_sections),
     ("0006_independent_grade_tracking", _add_tracking_tables),
     ("0007_student_active_time", _add_activity_tables),
+    # Two simultaneous "add unit to review" requests created every card twice,
+    # and every later review of such a word failed with a server error, so
+    # neither copy progressed after that: keep the oldest of each group.
+    ("0008_unique_srs_cards", _unique_srs_cards),
 )
 
 _CREATE_LOG = text(

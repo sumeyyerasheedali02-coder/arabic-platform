@@ -253,8 +253,10 @@ class ExerciseAnswer(Base):
 # ─────────────────────────────────────────
 class SRSCard(Base):
     __tablename__ = "srs_cards"
-    # Also created on existing databases by migration 0001 (app/migrations.py)
-    __table_args__ = (Index("ix_srs_cards_student_vocabulary", "student_id", "vocabulary_id"),)
+    # One card per student and word. Also created on existing databases by
+    # migration 0008 (app/migrations.py), which removes earlier duplicates.
+    __table_args__ = (Index("ux_srs_cards_student_vocabulary", "student_id", "vocabulary_id",
+                            unique=True),)
     id              = Column(Integer, primary_key=True, index=True)
     student_id      = Column(Integer, ForeignKey("students.id",    ondelete="CASCADE"))
     vocabulary_id   = Column(Integer, ForeignKey("vocabulary.id",  ondelete="CASCADE"))

@@ -1,9 +1,6 @@
 """Self-service profile, password changes and one-time recovery links."""
 import asyncio
-import hashlib
 import logging
-import time
-from collections import OrderedDict
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,10 +15,11 @@ from app.models import Student
 from app.routers.auth import _token_for, find_student_by_email
 from app.security import create_access_token, get_current_account, hash_password, verify_password
 from app.services.account_email import mail_ready, send_reset_email
+from app.services.rate_limit import SlidingWindow, client_ip
 
 router = APIRouter(prefix="/api/account", tags=["account"])
 logger = logging.getLogger(__name__)
-_requests: OrderedDict[str, list[float]] = OrderedDict()
+_recovery_requests = SlidingWindow(900)
 
 
 class NewPassword(BaseModel):
@@ -57,21 +55,14 @@ class ProfileChange(BaseModel):
 
 
 def limit_requests(request: Request, email: str | None = None) -> None:
-    """Bounded per-process throttling; do not trust user-supplied forwarding headers."""
-    now = time.monotonic()
-    identifiers = [(f"ip:{request.client.host if request.client else 'unknown'}", 10)]
+    """Bounded per-process throttling of recovery requests."""
+    keys = [(f"ip:{client_ip(request)}", 10)]
     if email is not None:
-        identifiers.append((f"email:{email.lower()}", 3))
-    keys = [(hashlib.sha256(value.encode()).hexdigest(), limit) for value, limit in identifiers]
-    for key, limit in keys:
-        recent = [stamp for stamp in _requests.get(key, []) if now - stamp < 900]
-        if len(recent) >= limit:
-            raise HTTPException(429, "طلبات كثيرة. حاول مجددًا بعد 15 دقيقة")
+        keys.append((f"email:{email.lower()}", 3))
+    if any(_recovery_requests.exceeded(key, limit) for key, limit in keys):
+        raise HTTPException(429, "طلبات كثيرة. حاول مجددًا بعد 15 دقيقة")
     for key, _ in keys:
-        _requests[key] = [stamp for stamp in _requests.get(key, []) if now - stamp < 900] + [now]
-        _requests.move_to_end(key)
-    while len(_requests) > 10000:
-        _requests.popitem(last=False)
+        _recovery_requests.record(key)
 
 
 @router.get("/me")
