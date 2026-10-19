@@ -56,6 +56,26 @@ async def test_dialogues_return_lines_in_order(client, content):
     assert (await client.get(f"/api/lessons/{content.a_muf}/dialogues")).json() == []
 
 
+async def test_dialogue_audio_uses_content_numbers_not_database_ids(client, content, monkeypatch):
+    from content.dialogue_audio import DIALOGUE_AUDIO
+
+    # The fixture inserts unit 2 before unit 1, so their row IDs and numbers differ.
+    assert content.unit_a != 1
+    monkeypatch.setitem(DIALOGUE_AUDIO, (1, 1), "https://media.example.test/unit-01/dialogue-01.mp3")
+    monkeypatch.setitem(DIALOGUE_AUDIO, (content.unit_a, 1), "https://media.example.test/wrong-unit.mp3")
+    dialogues = (await client.get(f"/api/lessons/{content.a_hiwar}/dialogues")).json()
+    assert dialogues[0]["audio_url"] == "https://media.example.test/unit-01/dialogue-01.mp3"
+    assert len(dialogues[0]["lines"]) == 2
+
+
+async def test_dialogue_without_published_recording_has_no_audio(client, content, monkeypatch):
+    from content.dialogue_audio import DIALOGUE_AUDIO
+
+    monkeypatch.delitem(DIALOGUE_AUDIO, (1, 1))
+    dialogues = (await client.get(f"/api/lessons/{content.a_hiwar}/dialogues")).json()
+    assert dialogues[0]["audio_url"] is None
+
+
 async def test_exercises_are_listed_and_filterable(client, content):
     url = f"/api/units/{content.unit_a}/exercises"
     everything = (await client.get(url)).json()

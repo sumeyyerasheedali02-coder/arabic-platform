@@ -19,6 +19,16 @@ Edit these files to change content. Do not edit content in the database by
 hand and do not write one-off scripts for it: the next rebuild would lose the
 change.
 
+### Dialogue audio
+
+Recordings are served directly from Vercel Blob. `dialogue_audio.py` maps
+`(unit_number, dialogue_number)` to a published HTTPS URL; these are course
+numbers, not database row IDs. Upload compressed, reviewed clips with a content
+hash in the filename, then add their URLs to this catalog. Check the recording
+against the deployed dialogue text before publishing. No database migration,
+student-data update, or storage token in the frontend is needed. The player
+does not preload recordings and pauses another dialogue when playback starts.
+
 ## What a seed produces
 
 **Base content** (`python -m tools.seed`, and the automatic first-run bootstrap):

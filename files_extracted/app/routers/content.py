@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models import Dialogue, Lesson, Unit, Vocabulary
 from app.schemas import DialogueOut, LessonOut, UnitOut, VocabularyOut
+from content.dialogue_audio import DIALOGUE_AUDIO
 
 router = APIRouter(prefix="/api", tags=["content"])
 
@@ -74,10 +75,17 @@ async def search_vocabulary(q: str, db: AsyncSession = Depends(get_db)):
 @router.get("/lessons/{lesson_id}/dialogues", response_model=List[DialogueOut])
 async def get_dialogues(lesson_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Dialogue)
+        select(Dialogue, Unit.unit_number)
+        .join(Lesson, Dialogue.lesson_id == Lesson.id)
+        .join(Unit, Lesson.unit_id == Unit.id)
         .where(Dialogue.lesson_id == lesson_id)
         .order_by(Dialogue.dialogue_number)
         # Lines must be loaded eagerly: lazy loading is not possible in async sessions.
         .options(selectinload(Dialogue.lines))
     )
-    return result.scalars().all()
+    return [
+        DialogueOut.model_validate(dialogue).model_copy(update={
+            "audio_url": DIALOGUE_AUDIO.get((unit_number, dialogue.dialogue_number)),
+        })
+        for dialogue, unit_number in result.all()
+    ]
