@@ -199,3 +199,22 @@ async def test_rebuilding_supplements_will_not_silently_delete_answers(client, r
 
     totals = await seed_tool.supplements_only(allow_deleting_answers=True, log=_quiet)
     assert totals["answers_deleted"] == 1 and await _count(models.ExerciseAnswer) == 0
+
+
+async def test_book_3_units_hold_listening_texts_as_narration(client):
+    await _empty_content()
+    listening_unit = dict(TINY_UNITS[0], number=33, dialogues=[{
+        "title": "نص مسموع", "speakers": [],
+        "lines": [{"speaker": "", "text": "الفقرة الأولى."}, {"speaker": "", "text": "الفقرة الثانية."}]}])
+    await seed_tool.seed(units=[TINY_UNITS[0], listening_unit], unit_exercises={},
+                         rng=random.Random(1), log=_quiet)
+
+    units = (await client.get("/api/units")).json()
+    first_lessons = [(await client.get(f"/api/units/{u['id']}/lessons")).json()[0] for u in units]
+    assert [(lesson["title_tr"], lesson["lesson_type"]) for lesson in first_lessons] == [
+        ("Diyaloglar", "hiwar"), ("Dinleme Metinleri", "hiwar")]
+
+    text = (await client.get(f"/api/lessons/{first_lessons[1]['id']}/dialogues")).json()[0]
+    assert text["situation_tr"] == ""
+    assert [(line["speaker"], line["text_ar"]) for line in text["lines"]] == [
+        ("", "الفقرة الأولى."), ("", "الفقرة الثانية.")]

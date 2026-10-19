@@ -19,6 +19,7 @@ ruff check .
 python -m tools.seed --help            # content loading
 python -m tools.migrate --status       # schema migrations
 python -m tools.content_report         # read-only summary of a database
+python -m tools.update_dialogues       # dialogues of a live database (dry run; --apply)
 python -m tools.teacher_accounts list  # teacher provisioning
 ```
 
@@ -81,4 +82,4 @@ Relationships: `Unit → Lesson → Dialogue → DialogueLine`, `Unit → Lesson
 
 ## Adding content
 
-See `files_extracted/content/README.md`. In short: edit the data module, try it on a scratch database with `tools.seed`, check with `tools.content_report`, then decide how to apply it to a database that students use.
+See `files_extracted/content/README.md`. In short: edit the data module, try it on a scratch database with `tools.seed`, check with `tools.content_report`, then decide how to apply it to a database that students use (dialogues: `tools.update_dialogues`).

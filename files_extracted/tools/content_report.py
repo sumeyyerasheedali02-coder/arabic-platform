@@ -18,8 +18,8 @@ from app.database import AsyncSessionLocal
 from app.models import Dialogue, DialogueLine, Exercise, Lesson, Unit, Vocabulary
 from app.services.exercise_categories import exercise_category
 
-EXPECTED_BASE = dict(units=48, lessons=144, vocabulary=998, dialogues=140,
-                     dialogue_lines=989, exercises=2129)
+EXPECTED_BASE = dict(units=48, lessons=144, vocabulary=998, dialogues=115,
+                     dialogue_lines=1159, exercises=2129)
 EXPECTED_WITH_SUPPLEMENTS = 4056
 
 RANGES = (("base/grammar 1-499", 1, 499), ("word order 501-599", 501, 599),

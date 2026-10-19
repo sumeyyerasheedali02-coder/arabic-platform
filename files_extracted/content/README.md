@@ -25,7 +25,11 @@ change.
 
 - 48 units, each with three lessons: dialogues (`hiwar`), vocabulary
   (`mufradat`), grammar (`nahw`).
-- 140 dialogues (989 lines), 998 words.
+- 115 dialogues and texts (1159 lines), 998 words, all transcribed from the student
+  book. Units 1–32: the book's dialogues. Book 3 (units 33–48) has no dialogues;
+  its first lesson holds the book's two listening texts per unit instead
+  ("نصوص فهم المسموع"). A line with an empty speaker is narration: a stage
+  direction or a paragraph.
 - 2129 exercises: two generated per word (multiple choice + true/false, with
   randomly chosen wrong answers) plus the base exercises of units 1–8.
 
@@ -68,7 +72,11 @@ python -m tools.content_report          # uses DATABASE_URL
    - **Supplementary exercises only** → `python -m tools.seed --supplements-only`.
      It stops if students have answers on the exercises it would rebuild; add
      `--yes-delete-affected-answers` only if losing those answers is acceptable.
-   - **Units, dialogues, vocabulary or base exercises** → there is no in-place
+   - **Dialogues only** → `python -m tools.update_dialogues` (a dry run that
+     reports the changes), then the same with `--apply`. It replaces the dialogues
+     and the first lesson's title of every unit; no student data refers to them,
+     so answers, progress, review cards and active time are kept.
+   - **Units, vocabulary or base exercises** → there is no in-place
      update. `--replace --yes-delete-student-activity` rebuilds everything and
      deletes all answers, progress and review cards. Plan this for a term break,
      or write a targeted migration instead.
