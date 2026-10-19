@@ -6,6 +6,7 @@ import TrackingLink from '../components/TrackingLink'
 const NAV = [
   { to: '/lessons',   label: 'الدروس' },
   { to: '/exercises', label: 'التدريبات' },
+  { to: '/shared-words', label: 'مفردات مشتركة' },
   { to: '/srs',       label: 'بطاقات الحفظ' },
   { to: '/chat',      label: 'محادثة AI' },
   { to: '/dashboard', label: 'تقدمي' },

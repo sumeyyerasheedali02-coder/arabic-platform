@@ -12,6 +12,7 @@ const ClassSectionPage = lazy(() => import('./features/auth/ClassSectionPage'))
 const LessonsPage      = lazy(() => import('./features/lessons/LessonsPage'))
 const LessonDetailPage = lazy(() => import('./features/lessons/LessonDetailPage'))
 const ExercisesPage    = lazy(() => import('./features/exercises/ExercisesPage'))
+const SharedWordsPage  = lazy(() => import('./features/sharedWords/SharedWordsPage'))
 const FlashcardsPage   = lazy(() => import('./features/srs/FlashcardsPage'))
 const DashboardPage    = lazy(() => import('./features/dashboard/DashboardPage'))
 const TeacherPage      = lazy(() => import('./features/teacher/TeacherPage'))
@@ -93,6 +94,7 @@ export default function App() {
             <Route path="/lessons"           element={<LearningRoute><LessonsPage /></LearningRoute>} />
             <Route path="/lessons/:lessonId" element={<LearningRoute><LessonDetailPage /></LearningRoute>} />
             <Route path="/exercises"         element={<LearningRoute exercises><ExercisesPage /></LearningRoute>} />
+            <Route path="/shared-words"      element={<SharedWordsPage />} />
             <Route path="/srs"               element={<PersonalProgressOnly><FlashcardsPage /></PersonalProgressOnly>} />
             <Route path="/dashboard"         element={<PersonalProgressOnly><DashboardPage /></PersonalProgressOnly>} />
             <Route path="/teacher"           element={<TeacherOnly><TeacherPage /></TeacherOnly>} />
