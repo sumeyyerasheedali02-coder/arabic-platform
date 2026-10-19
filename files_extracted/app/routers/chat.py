@@ -12,27 +12,33 @@ from app.models import Student, Unit, Vocabulary
 from app.schemas import ChatRequest, ChatResponse
 from app.security import get_optional_account
 from app.services import ai
-from app.services.rate_limit import SlidingWindow, client_ip
+from app.services.rate_limit import SlidingWindow, known_client_ip
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
 # Every message costs a provider call. Logged-in accounts are counted on their
-# own; guests share the count of their address (a campus may share one).
+# own. Guests are counted per address when the address is known (a campus may
+# share one), and all guests together are capped as well.
 _chat_requests = SlidingWindow(600)
 CHAT_MESSAGES_PER_ACCOUNT = 40
 CHAT_MESSAGES_PER_GUEST_ADDRESS = 20
+CHAT_MESSAGES_ALL_GUESTS = 300
 
 
 def limit_chat(request: Request, account: Optional[Student] = Depends(get_optional_account)) -> None:
     if account is not None:
-        key, limit = f"account:{account.id}", CHAT_MESSAGES_PER_ACCOUNT
+        limits = [(f"account:{account.id}", CHAT_MESSAGES_PER_ACCOUNT)]
         detail = "أرسلت رسائل كثيرة. انتظر بضع دقائق ثم حاول مجددًا"
     else:
-        key, limit = f"ip:{client_ip(request)}", CHAT_MESSAGES_PER_GUEST_ADDRESS
+        limits = [("guests", CHAT_MESSAGES_ALL_GUESTS)]
+        address = known_client_ip(request)
+        if address:
+            limits.append((f"ip:{address}", CHAT_MESSAGES_PER_GUEST_ADDRESS))
         detail = "أرسلت رسائل كثيرة. انتظر بضع دقائق، أو سجّل الدخول لمتابعة المحادثة"
-    if _chat_requests.exceeded(key, limit):
+    if any(_chat_requests.exceeded(key, limit) for key, limit in limits):
         raise HTTPException(status_code=429, detail=detail)
-    _chat_requests.record(key)
+    for key, _ in limits:
+        _chat_requests.record(key)
 
 
 async def _unit_context(db: AsyncSession, unit_id: int) -> str:

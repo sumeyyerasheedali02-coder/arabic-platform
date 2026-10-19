@@ -105,9 +105,16 @@ async def _add_activity_tables(conn: AsyncConnection) -> None:
 
 
 async def _unique_srs_cards(conn: AsyncConnection) -> None:
-    await conn.execute(text(
-        "DELETE FROM srs_cards WHERE id NOT IN "
-        "(SELECT MIN(id) FROM srs_cards GROUP BY student_id, vocabulary_id)"))
+    # Of each student's copies of one word keep the one with the most review
+    # progress (latest review, then most repetitions), then the oldest.
+    removed = (await conn.execute(text(
+        "DELETE FROM srs_cards WHERE id IN (SELECT id FROM ("
+        "SELECT id, ROW_NUMBER() OVER (PARTITION BY student_id, vocabulary_id ORDER BY "
+        "CASE WHEN last_reviewed IS NULL THEN 1 ELSE 0 END, last_reviewed DESC, "
+        "repetitions DESC, id) AS position FROM srs_cards "
+        "WHERE student_id IS NOT NULL AND vocabulary_id IS NOT NULL) ranked "
+        "WHERE position > 1)"))).rowcount
+    logger.info("0008_unique_srs_cards: removed %s duplicate review card(s)", removed)
     await conn.execute(text(
         "CREATE UNIQUE INDEX IF NOT EXISTS ux_srs_cards_student_vocabulary "
         "ON srs_cards (student_id, vocabulary_id)"))

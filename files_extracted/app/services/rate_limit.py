@@ -60,6 +60,18 @@ def client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def known_client_ip(request: Request) -> str | None:
+    """The caller's address only when CLIENT_IP_HEADER says where to find it.
+
+    Without it, every request behind the proxy shares the proxy's address, and
+    a per-address limit would lock out everyone at once; such limits are then
+    skipped (per-account limits still apply).
+    """
+    header = get_settings().client_ip_header
+    value = request.headers.get(header, "").split(",")[-1].strip() if header else ""
+    return value or None
+
+
 def reset_all() -> None:
     """Forget every count (used by the tests)."""
     for limiter in _limiters:

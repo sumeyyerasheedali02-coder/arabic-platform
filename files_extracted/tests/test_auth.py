@@ -170,11 +170,23 @@ async def test_repeated_failed_logins_lock_that_identifier_only(register, login,
 async def test_failed_logins_from_one_address_are_limited(register, login, new_email, monkeypatch):
     from app.routers import auth
 
+    monkeypatch.setattr(auth, "known_client_ip", lambda request: "203.0.113.9")
     monkeypatch.setattr(auth, "FAILED_LOGINS_PER_ADDRESS", 4)
     student = await register()
     for _ in range(4):
         assert (await login(new_email(), "wrong-password")).status_code == 401
     assert (await login(student.email, student.password)).status_code == 429
+
+
+async def test_unknown_addresses_never_lock_out_other_accounts(register, login, new_email, monkeypatch):
+    """Behind a proxy without CLIENT_IP_HEADER every request has the same address."""
+    from app.routers import auth
+
+    monkeypatch.setattr(auth, "FAILED_LOGINS_PER_ADDRESS", 4)
+    student = await register()
+    for _ in range(10):
+        assert (await login(new_email(), "wrong-password")).status_code == 401
+    assert (await login(student.email, student.password)).status_code == 200
 
 
 async def test_successful_logins_are_not_limited(register, login):

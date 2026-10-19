@@ -26,7 +26,7 @@ from app.security import (
     is_reserved_staff_email,
     verify_password,
 )
-from app.services.rate_limit import SlidingWindow, client_ip
+from app.services.rate_limit import SlidingWindow, known_client_ip
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -123,8 +123,10 @@ async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(),
     identifier = form.username.strip().lower()
     if "@" not in identifier:
         identifier = StudentNumberSelection.normalize_student_number(identifier)
-    limits = ((f"account:{identifier}", FAILED_LOGINS_PER_ACCOUNT),
-              (f"ip:{client_ip(request)}", FAILED_LOGINS_PER_ADDRESS))
+    limits = [(f"account:{identifier}", FAILED_LOGINS_PER_ACCOUNT)]
+    address = known_client_ip(request)
+    if address:
+        limits.append((f"ip:{address}", FAILED_LOGINS_PER_ADDRESS))
     if any(_failed_logins.exceeded(key, limit) for key, limit in limits):
         raise HTTPException(status_code=429, detail="محاولات دخول كثيرة. حاول مجددًا بعد 15 دقيقة")
 

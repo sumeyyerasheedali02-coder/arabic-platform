@@ -255,10 +255,18 @@ async def test_duplicate_review_cards_are_merged_before_the_unique_index(tmp_pat
                 "INSERT INTO srs_cards (id, student_id, vocabulary_id, next_review) VALUES "
                 "(1, 5, 10, '2026-01-01'), (2, 5, 10, '2026-01-01'), (3, 5, 11, '2026-01-01'), "
                 "(4, 6, 10, '2026-01-01'), (5, 6, 10, '2026-01-01'), (6, 6, 10, '2026-01-01')"))
+            # Student 7: only the newer copy was reviewed; its progress must survive.
+            await conn.execute(text(
+                "INSERT INTO srs_cards (id, student_id, vocabulary_id, next_review, repetitions, "
+                "interval_days, last_reviewed) VALUES "
+                "(7, 7, 10, '2026-01-01', 0, 1, NULL), (8, 7, 10, '2026-02-01', 3, 15, '2026-01-17')"))
 
             assert await apply_migrations(conn) == ["0008_unique_srs_cards"]
             ids = (await conn.execute(text("SELECT id FROM srs_cards ORDER BY id"))).scalars().all()
-            assert ids == [1, 3, 4]
+            assert ids == [1, 3, 4, 8]
+            kept = (await conn.execute(text(
+                "SELECT repetitions, interval_days FROM srs_cards WHERE id = 8"))).one()
+            assert tuple(kept) == (3, 15)
             indexes = await conn.run_sync(_index_names, "srs_cards")
             assert "ux_srs_cards_student_vocabulary" in indexes
             assert "ix_srs_cards_student_vocabulary" not in indexes
