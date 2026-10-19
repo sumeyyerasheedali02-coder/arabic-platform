@@ -51,7 +51,7 @@ export default function ExerciseCard({ exercise, onAnswer, isGuest }) {
         background: 'var(--cream)', border: '1px solid var(--border)',
         borderRadius: 20, padding: '3px 10px',
       }}>
-        {TYPE_LABELS[exercise.exercise_type] || exercise.exercise_type}
+        {TYPE_LABELS[exercise.category] || TYPE_LABELS[exercise.exercise_type] || exercise.exercise_type}
       </span>
 
       <div style={{ marginTop: 16, marginBottom: 18 }}>
@@ -70,7 +70,7 @@ export default function ExerciseCard({ exercise, onAnswer, isGuest }) {
 
       {!result && (
         <>
-          {exercise.exercise_type === 'multiple_choice' && options ? (
+          {options && exercise.exercise_type !== 'true_false' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {options.map((opt, i) => (
                 <button

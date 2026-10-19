@@ -148,6 +148,9 @@ class Exercise(Base):
     explanation_ar   = Column(Text)
     difficulty       = Column(Integer, default=1)
     points           = Column(Integer, default=10)
+    # Replaced or surplus exercises are hidden, never deleted: students'
+    # answers (and points) on them stay. Added by migration 0009.
+    is_hidden        = Column(Boolean, nullable=False, default=False, server_default="false")
 
     unit             = relationship("Unit",   back_populates="exercises")
     lesson           = relationship("Lesson", back_populates="exercises")
