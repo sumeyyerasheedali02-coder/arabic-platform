@@ -8,11 +8,6 @@ from app.security import create_access_token
 from . import _app  # noqa: F401 - identify the temporary test database before app imports
 
 
-@pytest.fixture(autouse=True)
-def clear_limits():
-    account._requests.clear()
-
-
 @pytest.mark.parametrize("role", ["student", "teacher", "admin"])
 async def test_self_service_preserves_role_and_identifiers(client, register, teacher, admin, role):
     person = await {"student": register, "teacher": teacher, "admin": admin}[role]()

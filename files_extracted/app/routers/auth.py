@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
@@ -26,8 +26,15 @@ from app.security import (
     is_reserved_staff_email,
     verify_password,
 )
+from app.services.rate_limit import SlidingWindow, known_client_ip
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+# Failed logins per 15 minutes. The per-address limit is high because a whole
+# class can share one campus address; the per-account limit stops guessing.
+_failed_logins = SlidingWindow(900)
+FAILED_LOGINS_PER_ACCOUNT = 10
+FAILED_LOGINS_PER_ADDRESS = 100
 
 
 async def find_student_by_email(db: AsyncSession, email: str) -> Optional[Student]:
@@ -109,11 +116,25 @@ async def check_email(email: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+async def login(request: Request, form: OAuth2PasswordRequestForm = Depends(),
+                db: AsyncSession = Depends(get_db)):
     """Form-encoded username accepts the e-mail or the student's unique number."""
+    # Same key for every spelling of one identifier (letter case, Arabic digits).
+    identifier = form.username.strip().lower()
+    if "@" not in identifier:
+        identifier = StudentNumberSelection.normalize_student_number(identifier)
+    limits = [(f"account:{identifier}", FAILED_LOGINS_PER_ACCOUNT)]
+    address = known_client_ip(request)
+    if address:
+        limits.append((f"ip:{address}", FAILED_LOGINS_PER_ADDRESS))
+    if any(_failed_logins.exceeded(key, limit) for key, limit in limits):
+        raise HTTPException(status_code=429, detail="محاولات دخول كثيرة. حاول مجددًا بعد 15 دقيقة")
+
     student = await find_login_account(db, form.username)
 
     if not student or not student.is_active or not verify_password(form.password, student.password_hash):
+        for key, _ in limits:
+            _failed_logins.record(key)
         raise HTTPException(status_code=401, detail="بيانات تسجيل الدخول غير صحيحة")
 
     await db.execute(

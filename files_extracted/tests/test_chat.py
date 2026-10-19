@@ -137,3 +137,81 @@ async def test_stream_errors_before_and_after_first_chunk(client, fake_ai, monke
     res = await client.post('/api/chat/stream', json={'messages': [{'role': 'user', 'content': 'مرحبا'}]})
     events = [json.loads(line) for line in res.text.splitlines()]
     assert events == [{'text': 'أهلًا'}, {'error': 'انقطع الاتصال'}]
+
+
+async def test_guests_share_a_message_allowance_per_address(client, fake_ai, monkeypatch):
+    from app.routers import chat
+
+    monkeypatch.setattr(chat, "known_client_ip", lambda request: "203.0.113.9")
+    monkeypatch.setattr(chat, "CHAT_MESSAGES_PER_GUEST_ADDRESS", 2)
+    message = {"messages": [{"role": "user", "content": "مرحبا"}]}
+    assert (await client.post("/api/chat", json=message)).status_code == 200
+    assert (await client.post("/api/chat/stream", json=message)).status_code == 200
+    refused = await client.post("/api/chat/stream", json=message)
+    assert refused.status_code == 429 and "سجّل الدخول" in refused.json()["detail"]
+    assert len(fake_ai.calls) == 2
+
+
+async def test_logged_in_students_have_their_own_allowance(client, fake_ai, register, monkeypatch):
+    from app.routers import chat
+
+    monkeypatch.setattr(chat, "known_client_ip", lambda request: "203.0.113.9")
+    monkeypatch.setattr(chat, "CHAT_MESSAGES_PER_GUEST_ADDRESS", 1)
+    monkeypatch.setattr(chat, "CHAT_MESSAGES_PER_ACCOUNT", 2)
+    first, second = await register(), await register()
+    message = {"messages": [{"role": "user", "content": "مرحبا"}]}
+    assert (await client.post("/api/chat", json=message)).status_code == 200      # guest
+    assert (await client.post("/api/chat", json=message)).status_code == 429
+    for _ in range(2):
+        assert (await client.post("/api/chat", json=message, headers=first.headers)).status_code == 200
+    assert (await client.post("/api/chat", json=message, headers=first.headers)).status_code == 429
+    assert (await client.post("/api/chat", json=message, headers=second.headers)).status_code == 200
+
+
+async def test_without_a_known_address_all_guests_share_one_cap(client, fake_ai, register, monkeypatch):
+    from app.routers import chat
+
+    monkeypatch.setattr(chat, "CHAT_MESSAGES_PER_GUEST_ADDRESS", 1)   # not used: no address
+    monkeypatch.setattr(chat, "CHAT_MESSAGES_ALL_GUESTS", 3)
+    message = {"messages": [{"role": "user", "content": "مرحبا"}]}
+    for _ in range(3):
+        assert (await client.post("/api/chat", json=message)).status_code == 200
+    assert (await client.post("/api/chat", json=message)).status_code == 429
+    student = await register()     # logged-in students are not part of the guest cap
+    assert (await client.post("/api/chat", json=message, headers=student.headers)).status_code == 200
+
+
+async def test_a_stale_token_is_treated_as_a_guest_not_rejected(client, fake_ai):
+    message = {"messages": [{"role": "user", "content": "مرحبا"}]}
+    res = await client.post("/api/chat", json=message, headers={"Authorization": "Bearer not-a-token"})
+    assert res.status_code == 200
+
+
+async def test_client_address_header_is_used_only_when_configured(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services import rate_limit
+
+    request = SimpleNamespace(headers={"x-forwarded-for": "6.6.6.6, 203.0.113.9"},
+                              client=SimpleNamespace(host="10.0.0.1"))
+    settings = SimpleNamespace(client_ip_header="")
+    monkeypatch.setattr(rate_limit, "get_settings", lambda: settings)
+    assert rate_limit.client_ip(request) == "10.0.0.1"
+    settings.client_ip_header = "x-forwarded-for"
+    assert rate_limit.client_ip(request) == "203.0.113.9"       # appended by the proxy
+
+
+def test_known_client_address_requires_the_configured_header(monkeypatch):
+    from types import SimpleNamespace
+
+    from app.services import rate_limit
+
+    request = SimpleNamespace(headers={"x-forwarded-for": "6.6.6.6, 203.0.113.9"},
+                              client=SimpleNamespace(host="10.0.0.1"))
+    settings = SimpleNamespace(client_ip_header="")
+    monkeypatch.setattr(rate_limit, "get_settings", lambda: settings)
+    assert rate_limit.known_client_ip(request) is None
+    settings.client_ip_header = "x-forwarded-for"
+    assert rate_limit.known_client_ip(request) == "203.0.113.9"
+    settings.client_ip_header = "x-real-ip"            # configured but absent
+    assert rate_limit.known_client_ip(request) is None

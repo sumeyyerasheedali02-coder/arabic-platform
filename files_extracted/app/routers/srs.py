@@ -3,7 +3,9 @@ from datetime import date, datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_, insert, select
+from sqlalchemy import and_, select
+from sqlalchemy.dialects import postgresql, sqlite
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -60,6 +62,16 @@ async def review_srs_card(
     student_id: int = Depends(get_current_student),
     db:         AsyncSession = Depends(get_db),
 ):
+    try:
+        return await _apply_review(db, student_id, data)
+    except IntegrityError:
+        # A simultaneous request created this student's card for the word
+        # first (one card per word is enforced); rate that card instead.
+        await db.rollback()
+        return await _apply_review(db, student_id, data)
+
+
+async def _apply_review(db: AsyncSession, student_id: int, data: SRSReview) -> dict:
     result = await db.execute(
         select(SRSCard).where(
             and_(
@@ -122,9 +134,13 @@ async def add_unit_to_srs(
         {"student_id": student_id, "vocabulary_id": word, "next_review": today}
         for word in words if word not in existing
     ]
+    added = 0
     if new_cards:
-        # One multi-row INSERT; the remaining columns take their defaults
-        await db.execute(insert(SRSCard), new_cards)
+        # One multi-row INSERT; the remaining columns take their defaults. A
+        # card a simultaneous request (double click) has just created is skipped.
+        dialect = postgresql if db.bind.dialect.name == "postgresql" else sqlite
+        inserted = await db.execute(dialect.insert(SRSCard).on_conflict_do_nothing(
+            index_elements=["student_id", "vocabulary_id"]).returning(SRSCard.id), new_cards)
+        added = len(inserted.all())
     await db.commit()
-    added = len(new_cards)
     return {"added": added, "message": f"تمت إضافة {added} بطاقة جديدة"}

@@ -1,17 +1,44 @@
 """Conversation with the Arabic tutor (open to guests)."""
 import json
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Unit, Vocabulary
+from app.models import Student, Unit, Vocabulary
 from app.schemas import ChatRequest, ChatResponse
+from app.security import get_optional_account
 from app.services import ai
+from app.services.rate_limit import SlidingWindow, known_client_ip
 
 router = APIRouter(prefix="/api", tags=["chat"])
+
+# Every message costs a provider call. Logged-in accounts are counted on their
+# own. Guests are counted per address when the address is known (a campus may
+# share one), and all guests together are capped as well.
+_chat_requests = SlidingWindow(600)
+CHAT_MESSAGES_PER_ACCOUNT = 40
+CHAT_MESSAGES_PER_GUEST_ADDRESS = 20
+CHAT_MESSAGES_ALL_GUESTS = 300
+
+
+def limit_chat(request: Request, account: Optional[Student] = Depends(get_optional_account)) -> None:
+    if account is not None:
+        limits = [(f"account:{account.id}", CHAT_MESSAGES_PER_ACCOUNT)]
+        detail = "أرسلت رسائل كثيرة. انتظر بضع دقائق ثم حاول مجددًا"
+    else:
+        limits = [("guests", CHAT_MESSAGES_ALL_GUESTS)]
+        address = known_client_ip(request)
+        if address:
+            limits.append((f"ip:{address}", CHAT_MESSAGES_PER_GUEST_ADDRESS))
+        detail = "أرسلت رسائل كثيرة. انتظر بضع دقائق، أو سجّل الدخول لمتابعة المحادثة"
+    if any(_chat_requests.exceeded(key, limit) for key, limit in limits):
+        raise HTTPException(status_code=429, detail=detail)
+    for key, _ in limits:
+        _chat_requests.record(key)
 
 
 async def _unit_context(db: AsyncSession, unit_id: int) -> str:
@@ -25,7 +52,7 @@ async def _unit_context(db: AsyncSession, unit_id: int) -> str:
     return ai.build_unit_context(unit.title_ar, unit.title_tr, words)
 
 
-@router.post("/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse, dependencies=[Depends(limit_chat)])
 async def chat_with_ai(data: ChatRequest, db: AsyncSession = Depends(get_db)):
     """The client sends the whole conversation each time; nothing is stored server-side."""
     unit_context = await _unit_context(db, data.unit_id) if data.unit_id else ""
@@ -36,7 +63,7 @@ async def chat_with_ai(data: ChatRequest, db: AsyncSession = Depends(get_db)):
     return ChatResponse(reply=reply, corrections=[])
 
 
-@router.post("/chat/stream")
+@router.post("/chat/stream", dependencies=[Depends(limit_chat)])
 async def stream_chat(data: ChatRequest, db: AsyncSession = Depends(get_db)):
     unit_context = await _unit_context(db, data.unit_id) if data.unit_id else ""
     reply = ai.stream_reply(data.messages, unit_context)

@@ -123,3 +123,35 @@ async def test_due_cards_say_what_each_rating_will_do(client, register, content)
             models.SRSCard.student_id == student.id, models.SRSCard.vocabulary_id == word))).scalar_one()
     expected = preview_intervals(stored.repetitions, stored.ease_factor, stored.interval_days)
     assert expected[4] == 6 and expected[1] == 1
+
+
+async def test_simultaneous_add_unit_requests_create_each_card_once(client, register, content):
+    import asyncio
+
+    student = await register()
+    url = f"/api/me/srs/add-unit/{content.unit_a}"
+    first, second = await asyncio.gather(client.post(url, headers=student.headers),
+                                         client.post(url, headers=student.headers))
+    assert first.status_code == second.status_code == 200
+    assert first.json()["added"] + second.json()["added"] == len(content.vocab_a)
+
+    due = (await client.get("/api/me/srs/due", headers=student.headers)).json()
+    assert sorted(card["vocabulary_id"] for card in due) == sorted(content.vocab_a)
+    res = await client.post("/api/me/srs/review", headers=student.headers,
+                            json={"vocabulary_id": content.vocab_a[0], "quality": 4})
+    assert res.status_code == 200
+
+
+async def test_simultaneous_first_reviews_of_a_word_share_one_card(client, register, content):
+    import asyncio
+
+    student = await register()
+    review = {"vocabulary_id": content.vocab_a[1], "quality": 5}
+    results = await asyncio.gather(*(client.post("/api/me/srs/review", headers=student.headers,
+                                                 json=review) for _ in range(2)))
+    assert [res.status_code for res in results] == [200, 200]
+    from ._app import AsyncSessionLocal
+    async with AsyncSessionLocal() as db:
+        cards = (await db.execute(select(models.SRSCard).where(
+            models.SRSCard.student_id == student.id))).scalars().all()
+    assert len(cards) == 1
