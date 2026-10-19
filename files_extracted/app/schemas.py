@@ -159,6 +159,7 @@ class DialogueOut(BaseModel):
     situation_tr:    Optional[str]
     lines:           List[DialogueLineOut]
     audio_url:       Optional[str] = None
+    audio_is_partial: bool = False
 
     model_config = {"from_attributes": True}
 

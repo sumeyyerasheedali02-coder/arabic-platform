@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function DialogueAudio({ url, title }) {
+export default function DialogueAudio({ url, title, partial = false }) {
   const [failed, setFailed] = useState(false)
   if (!url) return null
 
@@ -13,6 +13,11 @@ export default function DialogueAudio({ url, title }) {
 
   return (
     <div style={{ margin: '12px 0 16px' }}>
+      {partial && (
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 6px' }}>
+          تسجيل جزئي — يغطي بداية الحوار فقط.
+        </p>
+      )}
       <audio
         data-dialogue-audio
         controls

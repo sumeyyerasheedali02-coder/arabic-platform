@@ -28,6 +28,10 @@ hash in the filename, then add their URLs to this catalog. Check the recording
 against the deployed dialogue text before publishing. No database migration,
 student-data update, or storage token in the frontend is needed. The player
 does not preload recordings and pauses another dialogue when playback starts.
+Recordings that cover only the beginning of a dialogue must also be listed in
+`PARTIAL_DIALOGUE_AUDIO`, so both dialogue views label them as partial while
+keeping the complete lesson text available. The unit 2, dialogue 2 recording is
+partial and was published in that form at the owner's request.
 
 ## What a seed produces
 

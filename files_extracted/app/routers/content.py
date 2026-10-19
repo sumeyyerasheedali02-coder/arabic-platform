@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models import Dialogue, Lesson, Unit, Vocabulary
 from app.schemas import DialogueOut, LessonOut, UnitOut, VocabularyOut
-from content.dialogue_audio import DIALOGUE_AUDIO
+from content.dialogue_audio import DIALOGUE_AUDIO, PARTIAL_DIALOGUE_AUDIO
 
 router = APIRouter(prefix="/api", tags=["content"])
 
@@ -86,6 +86,7 @@ async def get_dialogues(lesson_id: int, db: AsyncSession = Depends(get_db)):
     return [
         DialogueOut.model_validate(dialogue).model_copy(update={
             "audio_url": DIALOGUE_AUDIO.get((unit_number, dialogue.dialogue_number)),
+            "audio_is_partial": (unit_number, dialogue.dialogue_number) in PARTIAL_DIALOGUE_AUDIO,
         })
         for dialogue, unit_number in result.all()
     ]

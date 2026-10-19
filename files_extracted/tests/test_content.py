@@ -65,6 +65,7 @@ async def test_dialogue_audio_uses_content_numbers_not_database_ids(client, cont
     monkeypatch.setitem(DIALOGUE_AUDIO, (content.unit_a, 1), "https://media.example.test/wrong-unit.mp3")
     dialogues = (await client.get(f"/api/lessons/{content.a_hiwar}/dialogues")).json()
     assert dialogues[0]["audio_url"] == "https://media.example.test/unit-01/dialogue-01.mp3"
+    assert dialogues[0]["audio_is_partial"] is False
     assert len(dialogues[0]["lines"]) == 2
 
 
@@ -74,6 +75,27 @@ async def test_dialogue_without_published_recording_has_no_audio(client, content
     monkeypatch.delitem(DIALOGUE_AUDIO, (1, 1))
     dialogues = (await client.get(f"/api/lessons/{content.a_hiwar}/dialogues")).json()
     assert dialogues[0]["audio_url"] is None
+
+
+async def test_incomplete_recording_is_labelled_without_truncating_lesson_text(client, content, monkeypatch):
+    from content.dialogue_audio import DIALOGUE_AUDIO
+
+    from ._app import AsyncSessionLocal, models
+
+    monkeypatch.setitem(DIALOGUE_AUDIO, (2, 2), "https://media.example.test/partial.mp3")
+    async with AsyncSessionLocal() as db:
+        dialogue = models.Dialogue(lesson_id=content.b_hiwar, dialogue_number=2, title_ar="الحوار الثاني")
+        db.add(dialogue)
+        await db.flush()
+        db.add_all([
+            models.DialogueLine(dialogue_id=dialogue.id, line_order=1, speaker="عمر", text_ar="وهذا عمه حمزة"),
+            models.DialogueLine(dialogue_id=dialogue.id, line_order=2, speaker="عثمان", text_ar="وهذا عمه أبو طالب"),
+        ])
+        await db.commit()
+    dialogues = (await client.get(f"/api/lessons/{content.b_hiwar}/dialogues")).json()
+    assert dialogues[0]["audio_url"] == "https://media.example.test/partial.mp3"
+    assert dialogues[0]["audio_is_partial"] is True
+    assert [line["text_ar"] for line in dialogues[0]["lines"]] == ["وهذا عمه حمزة", "وهذا عمه أبو طالب"]
 
 
 async def test_exercises_are_listed_and_filterable(client, content):
