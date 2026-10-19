@@ -713,7 +713,7 @@ BOOK_2_PART_2 = {
                 {"word_ar": "حِمَايَة", "word_tr": "Koruma", "word_en": "Protection"},
                 {"word_ar": "اعْتِدَاء", "word_tr": "Saldırı", "word_en": "Assault / Aggression"},
                 {"word_ar": "عَدَالَة", "word_tr": "Adalet", "word_en": "Justice"},
-                {"word_ar": "مَلَايِيز", "word_tr": "Malezya", "word_en": "Malaysia"},
+                {"word_ar": "مَالِيزْيَا", "word_tr": "Malezya", "word_en": "Malaysia"},
                 {"word_ar": "أَمَان", "word_tr": "Güvenlik / Emniyet", "word_en": "Safety"},
                 {"word_ar": "تَعَاوُن", "word_tr": "İşbirliği", "word_en": "Cooperation"},
                 {"word_ar": "يَقْبِض", "word_tr": "Tutuklamak", "word_en": "To arrest"},

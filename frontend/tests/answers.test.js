@@ -43,3 +43,24 @@ test('different letters and noninitial hamza remain significant', () => {
     ['سال', 'سَأَلَ'], ['بدا', 'بَدَأَ'], ['على', 'إِلَى'],
   ]) assert.equal(isCorrectAnswer(given, expected), false)
 })
+
+test('punctuation and repeated spaces are ignored', () => {
+  assert.ok(isCorrectAnswer('من اين انت', 'مِنْ أَيْنَ أَنْتَ؟'))
+  assert.ok(isCorrectAnswer('اسمي   خالد.', 'اسمي خالد'))
+  assert.ok(isCorrectAnswer('«بيت»', 'بيت'))
+})
+
+test('each listed alternative is accepted, and so is the whole answer', () => {
+  assert.ok(isCorrectAnswer('Köy', 'Kırsal / Köy'))
+  assert.ok(isCorrectAnswer('kırsal', 'Kırsal / Köy'))
+  assert.ok(isCorrectAnswer('Kırsal / Köy', 'Kırsal / Köy'))
+  assert.equal(isCorrectAnswer('Şehir', 'Kırsal / Köy'), false)
+  assert.equal(isCorrectAnswer('/', 'Kırsal / Köy'), false)
+})
+
+test('Turkish dotted and dotless i are not told apart', () => {
+  assert.ok(isCorrectAnswer('kiz', 'kız'))
+  assert.ok(isCorrectAnswer('İYİ', 'iyi'))
+  assert.ok(isCorrectAnswer('KITAP', 'kitap'))
+  assert.ok(isCorrectAnswer('Selamün aleyküm', 'Selâmün aleyküm'))
+})

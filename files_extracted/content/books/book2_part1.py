@@ -474,7 +474,7 @@ BOOK_2_PART_1 = {
                 {"word_ar": "دَقِيقَة", "word_tr": "Dakika", "word_en": "minute"},
                 {"word_ar": "حَيّ", "word_tr": "Mahalle", "word_en": "neighborhood"},
                 {"word_ar": "شَارِع", "word_tr": "Sokak", "word_en": "street"},
-                {"word_ar": "عَشَرَة دَقَائِق", "word_tr": "On dakika", "word_en": "ten minutes"},
+                {"word_ar": "عَشْرُ دَقَائِق", "word_tr": "On dakika", "word_en": "ten minutes"},
                 {"word_ar": "مَشْياً", "word_tr": "Yürüyerek", "word_en": "on foot"},
                 {"word_ar": "خَضْرَاء", "word_tr": "Yeşil", "word_en": "green"},
                 {"word_ar": "يُقَلِّل", "word_tr": "Azaltır", "word_en": "reduces"},

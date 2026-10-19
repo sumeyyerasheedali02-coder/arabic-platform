@@ -405,6 +405,11 @@ async def seed(*, replace=False, with_supplements=False, srs_for_existing_studen
             totals["supplements"] = await apply_supplements(db, rng=rng, log=log)
         if srs_for_existing_students:
             totals["review_cards"] = await _cards_for_every_student(db, log)
+        # Balance exercises: insert bank rows and set visibility.
+        if units is None:
+            from tools.balance_exercises import balance
+            log("Balancing exercises …")
+            totals["balance"] = await balance(db, log=log)
         await db.commit()
     log(f"Done: {totals}")
     return totals

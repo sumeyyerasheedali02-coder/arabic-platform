@@ -104,6 +104,13 @@ async def _add_activity_tables(conn: AsyncConnection) -> None:
         await conn.run_sync(lambda sync, table=model.__table__: table.create(sync, checkfirst=True))
 
 
+async def _add_exercise_hidden_flag(conn: AsyncConnection) -> None:
+    columns = await conn.run_sync(lambda sync: inspect(sync).get_columns("exercises"))
+    if "is_hidden" not in {column["name"] for column in columns}:
+        await conn.execute(text(
+            "ALTER TABLE exercises ADD COLUMN is_hidden BOOLEAN NOT NULL DEFAULT false"))
+
+
 async def _unique_srs_cards(conn: AsyncConnection) -> None:
     # Of each student's copies of one word keep the one with the most review
     # progress (latest review, then most repetitions), then the oldest.
@@ -142,6 +149,9 @@ MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     # and every later review of such a word failed with a server error, so
     # neither copy progressed after that: keep the oldest of each group.
     ("0008_unique_srs_cards", _unique_srs_cards),
+    # Exercises replaced by better ones, or beyond the number a unit shows, are
+    # hidden instead of deleted, so the answers recorded on them are kept.
+    ("0009_exercise_hidden_flag", _add_exercise_hidden_flag),
 )
 
 _CREATE_LOG = text(

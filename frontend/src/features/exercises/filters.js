@@ -12,6 +12,7 @@ export const TYPE_LABELS = {
   antonym:         'متعاكسات',
   plural:          'الجمع',
   comprehension:   'استيعاب قرائي',
+  word_order:      'ترتيب كلمات',
 }
 
 export const FILTER_OPTIONS = [
@@ -29,11 +30,14 @@ export const FILTER_OPTIONS = [
 ]
 
 // Filters that follow Exercise.category, which the server derives from the
-// content. The other filters follow Exercise.exercise_type.
+// content. The other filters follow Exercise.exercise_type, and only take
+// exercises without a category, so every exercise belongs to exactly one filter
+// (a word-order question is a fill_blank exercise, but not a "fill the blank").
 const CATEGORY_FILTERS = new Set(['synonym', 'antonym', 'plural', 'comprehension', 'word_order'])
+const TYPES_OF_FILTER = { translate_ar_tr: ['translate_ar_tr', 'translate_tr_ar'] }
 
 export function matchesFilter(exercise, filter) {
   if (filter === 'all') return true
   if (CATEGORY_FILTERS.has(filter)) return exercise.category === filter
-  return exercise.exercise_type === filter
+  return !exercise.category && (TYPES_OF_FILTER[filter] ?? [filter]).includes(exercise.exercise_type)
 }

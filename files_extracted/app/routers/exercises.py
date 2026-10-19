@@ -21,12 +21,14 @@ async def get_exercises(
     ex_type:    Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Exercise).where(Exercise.unit_id == unit_id)
+    # Hidden exercises were replaced or are surplus; their answers are kept.
+    query = select(Exercise).where(Exercise.unit_id == unit_id, Exercise.is_hidden.is_(False))
     if difficulty:
         query = query.where(Exercise.difficulty == difficulty)
     if ex_type:
         query = query.where(Exercise.exercise_type == ex_type)
-    query = query.order_by(Exercise.exercise_number)
+    # Numbers repeat between a unit's lessons; the id keeps the order stable.
+    query = query.order_by(Exercise.exercise_number, Exercise.id)
     result = await db.execute(query)
     return result.scalars().all()
 
