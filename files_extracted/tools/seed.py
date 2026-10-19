@@ -58,6 +58,9 @@ SUPPLEMENT_NUMBERS = (501, 999)
 # for the units that have no hand-written base exercises.
 GENERATED_FROM_UNIT = 9
 GENERATED_PER_UNIT = 5
+# Book 3 (units 33-48) has no dialogues; its first lesson holds the listening
+# texts of the book instead (still lesson_type "hiwar").
+LISTENING_TEXTS_FROM_UNIT = 33
 
 ENRICHMENT_HINTS = {
     "antonym": sets.HINT_ANTONYM,
@@ -185,9 +188,12 @@ async def load_base_content(db, units=None, unit_exercises=None, rng=random, log
         db.add(unit)
         await db.flush()
 
+        listening = data["number"] >= LISTENING_TEXTS_FROM_UNIT
         lessons = {
-            "hiwar": Lesson(unit_id=unit.id, lesson_number=1, title_ar="الحِوَارَات",
-                            title_tr="Diyaloglar", lesson_type="hiwar"),
+            "hiwar": Lesson(unit_id=unit.id, lesson_number=1,
+                            title_ar="نُصُوصُ فَهْمِ المَسْمُوع" if listening else "الحِوَارَات",
+                            title_tr="Dinleme Metinleri" if listening else "Diyaloglar",
+                            lesson_type="hiwar"),
             "mufradat": Lesson(unit_id=unit.id, lesson_number=2, title_ar="المُفْرَدَات",
                                title_tr="Kelimeler", lesson_type="mufradat"),
             "nahw": Lesson(unit_id=unit.id, lesson_number=3, title_ar="النَّحْو وَالتَّرَاكِيب",

@@ -25,7 +25,11 @@ change.
 
 - 48 units, each with three lessons: dialogues (`hiwar`), vocabulary
   (`mufradat`), grammar (`nahw`).
-- 140 dialogues (989 lines), 998 words.
+- 115 dialogues and texts (1159 lines), 998 words, all transcribed from the student
+  book. Units 1–32: the book's dialogues. Book 3 (units 33–48) has no dialogues;
+  its first lesson holds the book's two listening texts per unit instead
+  ("نصوص فهم المسموع"). A line with an empty speaker is narration: a stage
+  direction or a paragraph.
 - 2129 exercises: two generated per word (multiple choice + true/false, with
   randomly chosen wrong answers) plus the base exercises of units 1–8.
 

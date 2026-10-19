@@ -1,5 +1,24 @@
 const AMIRI = "'Amiri', serif"
 
+// A line without a speaker is narration: a stage direction inside a dialogue,
+// or a paragraph of a listening text (Book 3 has texts instead of dialogues).
+const isNarration = (line) => !line.speaker
+
+function Narration({ line }) {
+  return (
+    <div>
+      <div style={{ fontFamily: AMIRI, fontSize: 16, color: 'var(--text)', lineHeight: 1.9 }}>
+        {line.text_ar}
+      </div>
+      {line.translation_tr && (
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }} dir="ltr">
+          {line.translation_tr}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /** Dialogues as a script: speaker name beside each line ("الدروس" tab). */
 export function DialogueScript({ dialogues }) {
   return dialogues.map(dialogue => (
@@ -15,7 +34,7 @@ export function DialogueScript({ dialogues }) {
         </div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {dialogue.lines?.map((line, i) => (
+        {dialogue.lines?.map((line, i) => isNarration(line) ? <Narration key={i} line={line} /> : (
           <div key={i} style={{
             display: 'flex', gap: 10, alignItems: 'flex-start',
             opacity: line.is_key_phrase ? 1 : 0.65,
@@ -73,7 +92,10 @@ export function DialogueBubbles({ dialogues }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {dialogue.lines?.map((line, i) => {
-          const isRight = i % 2 === 0
+          if (isNarration(line)) return <Narration key={i} line={line} />
+          // Alternate sides between spoken lines only, so narration does not flip them.
+          const spoken = dialogue.lines.slice(0, i).filter(l => !isNarration(l)).length
+          const isRight = spoken % 2 === 0
           return (
             <div key={i} style={{
               display: 'flex', flexDirection: isRight ? 'row' : 'row-reverse',
