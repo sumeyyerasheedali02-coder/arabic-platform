@@ -72,7 +72,11 @@ python -m tools.content_report          # uses DATABASE_URL
    - **Supplementary exercises only** → `python -m tools.seed --supplements-only`.
      It stops if students have answers on the exercises it would rebuild; add
      `--yes-delete-affected-answers` only if losing those answers is acceptable.
-   - **Units, dialogues, vocabulary or base exercises** → there is no in-place
+   - **Dialogues only** → `python -m tools.update_dialogues` (a dry run that
+     reports the changes), then the same with `--apply`. It replaces the dialogues
+     and the first lesson's title of every unit; no student data refers to them,
+     so answers, progress, review cards and active time are kept.
+   - **Units, vocabulary or base exercises** → there is no in-place
      update. `--replace --yes-delete-student-activity` rebuilds everything and
      deletes all answers, progress and review cards. Plan this for a term break,
      or write a targeted migration instead.

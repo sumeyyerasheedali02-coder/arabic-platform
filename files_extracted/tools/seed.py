@@ -99,6 +99,26 @@ def _options(correct: str, pool: list[str], rng) -> list[str]:
 
 # ── Base content ──────────────────────────────────────────────
 
+def hiwar_lesson_titles(unit_number: int) -> tuple[str, str]:
+    """(title_ar, title_tr) of a unit's first lesson (also used by tools.update_dialogues)."""
+    if unit_number >= LISTENING_TEXTS_FROM_UNIT:
+        return "نُصُوصُ فَهْمِ المَسْمُوع", "Dinleme Metinleri"
+    return "الحِوَارَات", "Diyaloglar"
+
+
+def dialogue_rows(lesson_id: int, dialogues: list[dict]) -> list[Dialogue]:
+    """Dialogue rows (with their lines) for one lesson, from content.books data."""
+    return [
+        Dialogue(
+            lesson_id=lesson_id, dialogue_number=number, title_ar=dialogue["title"],
+            situation_tr="، ".join(dialogue["speakers"]),
+            lines=[DialogueLine(line_order=order, speaker=line["speaker"], text_ar=line["text"],
+                                translation_tr=None, is_key_phrase=False)
+                   for order, line in enumerate(dialogue["lines"], start=1)])
+        for number, dialogue in enumerate(dialogues, start=1)
+    ]
+
+
 def _vocabulary_exercises(vocab: list[dict], rng) -> list[dict]:
     """Two generated exercises per word: multiple choice and true/false."""
     translations = [word["word_tr"] for word in vocab]
@@ -188,12 +208,10 @@ async def load_base_content(db, units=None, unit_exercises=None, rng=random, log
         db.add(unit)
         await db.flush()
 
-        listening = data["number"] >= LISTENING_TEXTS_FROM_UNIT
+        title_ar, title_tr = hiwar_lesson_titles(data["number"])
         lessons = {
-            "hiwar": Lesson(unit_id=unit.id, lesson_number=1,
-                            title_ar="نُصُوصُ فَهْمِ المَسْمُوع" if listening else "الحِوَارَات",
-                            title_tr="Dinleme Metinleri" if listening else "Diyaloglar",
-                            lesson_type="hiwar"),
+            "hiwar": Lesson(unit_id=unit.id, lesson_number=1, title_ar=title_ar,
+                            title_tr=title_tr, lesson_type="hiwar"),
             "mufradat": Lesson(unit_id=unit.id, lesson_number=2, title_ar="المُفْرَدَات",
                                title_tr="Kelimeler", lesson_type="mufradat"),
             "nahw": Lesson(unit_id=unit.id, lesson_number=3, title_ar="النَّحْو وَالتَّرَاكِيب",
@@ -203,13 +221,7 @@ async def load_base_content(db, units=None, unit_exercises=None, rng=random, log
         db.add_all(lessons.values())
         await db.flush()
 
-        for number, dialogue in enumerate(data["dialogues"], start=1):
-            db.add(Dialogue(
-                lesson_id=lessons["hiwar"].id, dialogue_number=number, title_ar=dialogue["title"],
-                situation_tr="، ".join(dialogue["speakers"]),
-                lines=[DialogueLine(line_order=order, speaker=line["speaker"], text_ar=line["text"],
-                                    translation_tr=None, is_key_phrase=False)
-                       for order, line in enumerate(dialogue["lines"], start=1)]))
+        db.add_all(dialogue_rows(lessons["hiwar"].id, data["dialogues"]))
 
         db.add_all(Vocabulary(
             unit_id=unit.id, lesson_id=lessons["mufradat"].id, word_ar=word["word_ar"],
