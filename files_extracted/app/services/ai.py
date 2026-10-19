@@ -20,6 +20,16 @@ UNIT_VOCABULARY_LIMIT = 30
 MAX_HISTORY_MESSAGES = 8
 MAX_HISTORY_CHARACTERS = 6000
 
+# A single model can be busy ("503 This model is currently experiencing high
+# demand") or retired for a key. The tutor then tries the next one instead of
+# telling the student it is unavailable. The configured model is always first.
+FALLBACK_MODELS = ("gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.6-flash")
+
+
+def candidate_models() -> list[str]:
+    """The configured model first, then the fallbacks, without repeats."""
+    return list(dict.fromkeys([settings.gemini_model, *FALLBACK_MODELS]))
+
 
 class TutorUnavailable(Exception):
     """The tutor could not answer. `reason` is safe to show to the student."""
@@ -36,7 +46,7 @@ def get_client():
     if _client is None:
         _client = genai.Client(api_key=settings.google_api_key,
                                http_options=genai_types.HttpOptions(
-                                   timeout=20000, retry_options=genai_types.HttpRetryOptions(attempts=1)))
+                                   timeout=20000, retry_options=genai_types.HttpRetryOptions(attempts=2)))
     return _client
 
 
@@ -59,12 +69,12 @@ def build_system_prompt(unit_context: str = "") -> str:
 {unit_context}"""
 
 
-def reply_config() -> genai_types.GenerateContentConfig:
+def reply_config(model: str | None = None) -> genai_types.GenerateContentConfig:
     config = genai_types.GenerateContentConfig(
         temperature=0.5, max_output_tokens=256,
     )
     # Gemini 3 Flash supports minimal; 2.5 Flash supports disabling thinking.
-    model = settings.gemini_model
+    model = model or settings.gemini_model
     if model.startswith("gemini-3") and "flash" in model:
         config.thinking_config = genai_types.ThinkingConfig(thinking_level="minimal")
     elif model.startswith("gemini-2.5-flash"):
@@ -96,17 +106,25 @@ async def generate_reply(messages: Sequence[ChatMessage], unit_context: str = ""
     if not settings.google_api_key:
         raise TutorUnavailable("المساعد الذكي غير مفعّل على هذا الخادم")
 
-    config = reply_config()
-    config.system_instruction = build_system_prompt(unit_context)
-    try:
-        response = await get_client().aio.models.generate_content(
-            model=settings.gemini_model,
-            contents=request_contents(messages), config=config,
-        )
-        reply = (response.text or "").strip()
-    except Exception:
-        logger.exception("The tutor request to the AI provider failed")
-        raise TutorUnavailable("المساعد الذكي غير متاح حالياً، حاول بعد قليل") from None
+    contents = request_contents(messages)
+    reply = ""
+    models = candidate_models()
+    for position, model in enumerate(models):
+        config = reply_config(model)
+        config.system_instruction = build_system_prompt(unit_context)
+        try:
+            response = await get_client().aio.models.generate_content(
+                model=model, contents=contents, config=config,
+            )
+            reply = (response.text or "").strip()
+            break
+        except Exception:
+            remaining = models[position + 1:]
+            logger.warning("The tutor request to %s failed; %s", model,
+                           f"trying {remaining[0]}" if remaining else "no model left",
+                           exc_info=True)
+            if not remaining:
+                raise TutorUnavailable("المساعد الذكي غير متاح حالياً، حاول بعد قليل") from None
 
     if not reply:
         # e.g. the provider withheld the answer
@@ -117,31 +135,41 @@ async def generate_reply(messages: Sequence[ChatMessage], unit_context: str = ""
 async def stream_reply(messages: Sequence[ChatMessage], unit_context: str = ""):
     if not settings.google_api_key:
         raise TutorUnavailable("المساعد الذكي غير مفعّل على هذا الخادم")
-    config = reply_config()
-    config.system_instruction = build_system_prompt(unit_context)
+    contents = request_contents(messages)
     received = False
     started = time.perf_counter()
-    try:
-        deadline = asyncio.get_running_loop().time() + 30
-        response = await asyncio.wait_for(get_client().aio.models.generate_content_stream(
-            model=settings.gemini_model, contents=request_contents(messages), config=config), timeout=20)
+    models = candidate_models()
+    for position, model in enumerate(models):
+        config = reply_config(model)
+        config.system_instruction = build_system_prompt(unit_context)
         try:
-            while True:
-                remaining = max(0.01, deadline - asyncio.get_running_loop().time())
-                try:
-                    chunk = await asyncio.wait_for(anext(response), timeout=remaining)
-                except StopAsyncIteration:
-                    break
-                if chunk.text:
-                    if not received:
-                        logger.info("Tutor first text arrived in %.2fs", time.perf_counter() - started)
-                    received = True
-                    yield chunk.text
-        finally:
-            await response.aclose()
-    except Exception:
-        logger.exception("The streamed tutor request failed")
-        raise TutorUnavailable("تأخر المساعد أو تعذّر الاتصال به، حاول مجددًا") from None
+            deadline = asyncio.get_running_loop().time() + 30
+            response = await asyncio.wait_for(get_client().aio.models.generate_content_stream(
+                model=model, contents=contents, config=config), timeout=20)
+            try:
+                while True:
+                    remaining = max(0.01, deadline - asyncio.get_running_loop().time())
+                    try:
+                        chunk = await asyncio.wait_for(anext(response), timeout=remaining)
+                    except StopAsyncIteration:
+                        break
+                    if chunk.text:
+                        if not received:
+                            logger.info("Tutor first text arrived in %.2fs from %s",
+                                        time.perf_counter() - started, model)
+                        received = True
+                        yield chunk.text
+            finally:
+                await response.aclose()
+            break
+        except Exception:
+            # Another model can only be tried while nothing has been sent yet.
+            remaining_models = [] if received else models[position + 1:]
+            logger.warning("The streamed tutor request to %s failed; %s", model,
+                           f"trying {remaining_models[0]}" if remaining_models else "no model left",
+                           exc_info=True)
+            if not remaining_models:
+                raise TutorUnavailable("تأخر المساعد أو تعذّر الاتصال به، حاول مجددًا") from None
     if not received:
         raise TutorUnavailable("لم يصل رد من المساعد، حاول صياغة رسالتك بشكل آخر", status_code=502)
     logger.info("Tutor reply completed in %.2fs", time.perf_counter() - started)

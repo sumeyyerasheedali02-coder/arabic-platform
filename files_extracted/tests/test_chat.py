@@ -1,6 +1,7 @@
 """AI tutor requests, always against the mocked provider."""
 import dataclasses
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -137,6 +138,38 @@ async def test_stream_errors_before_and_after_first_chunk(client, fake_ai, monke
     res = await client.post('/api/chat/stream', json={'messages': [{'role': 'user', 'content': 'مرحبا'}]})
     events = [json.loads(line) for line in res.text.splitlines()]
     assert events == [{'text': 'أهلًا'}, {'error': 'انقطع الاتصال'}]
+
+
+async def test_a_busy_model_falls_back_to_the_next_one(client, fake_ai, monkeypatch):
+    """A model answering 503 must not reach the student as "tutor unavailable"."""
+    from ._app import ai_service
+
+    fallback = ai_service.FALLBACK_MODELS[0]
+    monkeypatch.setattr(ai_service, 'settings',
+                        dataclasses.replace(ai_service.settings, gemini_model='gemini-busy'))
+    calls = fake_ai.calls
+
+    async def generate(*, model, contents, config):
+        calls.append(SimpleNamespace(model=model, contents=contents, config=config))
+        if model != fallback:
+            raise RuntimeError('503 high demand')
+        return SimpleNamespace(text=fake_ai.reply)
+    monkeypatch.setattr(fake_ai.aio.models, 'generate_content', generate)
+
+    res = await client.post('/api/chat', json={'messages': [{'role': 'user', 'content': 'مرحبا'}]})
+    assert res.status_code == 200
+    assert res.json()['reply'] == fake_ai.reply
+    assert [c.model for c in calls] == ['gemini-busy', fallback]
+
+
+async def test_every_model_busy_is_reported_once_as_unavailable(client, fake_ai):
+    fake_ai.error = RuntimeError('503 high demand')
+    res = await client.post('/api/chat', json={'messages': [{'role': 'user', 'content': 'مرحبا'}]})
+    assert res.status_code == 503
+    assert 'high demand' not in res.text and res.json()['detail']
+    # Every candidate was tried before giving up.
+    from ._app import ai_service
+    assert [c.model for c in fake_ai.calls] == ai_service.candidate_models()
 
 
 async def test_guests_share_a_message_allowance_per_address(client, fake_ai, monkeypatch):
