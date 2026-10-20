@@ -35,7 +35,7 @@ export function DialogueScript({ dialogues }) {
           {dialogue.situation_tr}
         </div>
       )}
-      <DialogueAudio key={dialogue.audio_url} url={dialogue.audio_url} title={dialogue.title_ar} partial={dialogue.audio_is_partial} />
+      <DialogueAudio key={dialogue.audio_url} url={dialogue.audio_url} title={dialogue.title_ar} partial={dialogue.audio_is_partial} textDiffers={dialogue.audio_text_differs} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {dialogue.lines?.map((line, i) => isNarration(line) ? <Narration key={i} line={line} /> : (
           <div key={i} style={{
@@ -93,7 +93,7 @@ export function DialogueBubbles({ dialogues }) {
         </div>
       )}
 
-      <DialogueAudio key={dialogue.audio_url} url={dialogue.audio_url} title={dialogue.title_ar} partial={dialogue.audio_is_partial} />
+      <DialogueAudio key={dialogue.audio_url} url={dialogue.audio_url} title={dialogue.title_ar} partial={dialogue.audio_is_partial} textDiffers={dialogue.audio_text_differs} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {dialogue.lines?.map((line, i) => {
           if (isNarration(line)) return <Narration key={i} line={line} />

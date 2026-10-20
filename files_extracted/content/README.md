@@ -98,6 +98,13 @@ python -m tools.content_report          # uses DATABASE_URL
 
 ## Rules the code depends on
 
+- Published dialogue audio is mapped by unit number and dialogue number in
+  `dialogue_audio.py`, independent of database IDs. Media stays in object storage.
+  `PARTIAL_DIALOGUE_AUDIO` labels incomplete recordings;
+  `TEXT_VARIANT_DIALOGUE_AUDIO` labels approved wording differences. Neither flag
+  changes the written lesson. Do not attach a substantially different recording
+  merely because its topic matches the lesson.
+
 - A true/false answer is stored exactly as `صَحِيح` or `خَطَأ`
   (`ANSWER_TRUE` / `ANSWER_FALSE` in `exercises/__init__.py`); the buttons in
   the app send these strings.

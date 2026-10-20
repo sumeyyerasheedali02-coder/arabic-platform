@@ -77,6 +77,19 @@ async def test_dialogue_without_published_recording_has_no_audio(client, content
     assert dialogues[0]["audio_url"] is None
 
 
+async def test_recording_wording_notice_preserves_written_dialogue(client, content, monkeypatch):
+    from app.routers import content as content_routes
+
+    url = f"/api/lessons/{content.a_hiwar}/dialogues"
+    before = (await client.get(url)).json()
+    monkeypatch.setattr(content_routes, "TEXT_VARIANT_DIALOGUE_AUDIO", {(1, 1)})
+    after = (await client.get(url)).json()
+    assert after[0]["audio_text_differs"] is True
+    assert after[0]["lines"] == before[0]["lines"]
+    assert after[0]["title_ar"] == before[0]["title_ar"]
+    assert before[0]["audio_text_differs"] is False
+
+
 async def test_incomplete_recording_is_labelled_without_truncating_lesson_text(client, content, monkeypatch):
     from content.dialogue_audio import DIALOGUE_AUDIO
 

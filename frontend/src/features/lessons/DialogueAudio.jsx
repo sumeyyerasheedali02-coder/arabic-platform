@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function DialogueAudio({ url, title, partial = false }) {
+export default function DialogueAudio({ url, title, partial = false, textDiffers = false }) {
   const [failed, setFailed] = useState(false)
   if (!url) return null
 
@@ -16,6 +16,11 @@ export default function DialogueAudio({ url, title, partial = false }) {
       {partial && (
         <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 6px' }}>
           تسجيل جزئي — يغطي بداية الحوار فقط.
+        </p>
+      )}
+      {textDiffers && (
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 6px' }}>
+          تنبيه: تختلف بعض عبارات التسجيل عن النص المكتوب.
         </p>
       )}
       <audio
