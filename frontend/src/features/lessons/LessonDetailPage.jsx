@@ -120,7 +120,7 @@ export default function LessonDetailPage() {
             {/* Shown as plain text: lesson text is never interpreted as HTML */}
             {lesson.content_ar && <p style={{whiteSpace:"pre-wrap",marginBottom:"1rem"}}>{lesson.content_ar}</p>}
             {lesson.grammar_focus && <GrammarRules grammarFocus={lesson.grammar_focus} />}
-            {dialogues.length > 0 && <DialogueScript dialogues={dialogues} />}
+            {dialogues.length > 0 && <DialogueScript dialogues={dialogues} unitNumber={unit?.unit_number} />}
           </div>
         )}
         {activeTab==="exercises" && (

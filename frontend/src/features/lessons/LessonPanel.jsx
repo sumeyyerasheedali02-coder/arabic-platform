@@ -10,6 +10,7 @@ import GrammarRules from './GrammarRules'
 import { VocabularyList } from './VocabularyRow'
 import { lessonColor, lessonLabel } from './lessonTypes'
 import { useLessonActivity } from '../activity/useLessonActivity'
+import { useUnits } from '../units/useUnits'
 
 const TABS = [
   { key: 'lessons', label: 'الدروس' },
@@ -109,7 +110,7 @@ function PanelTabs({ active, onChange }) {
 }
 
 /** "الدروس" tab: what is shown depends on the kind of lesson. */
-function LessonTab({ lesson, words, dialogues }) {
+function LessonTab({ lesson, words, dialogues, unitNumber }) {
   const navigate = useNavigate()
   const type = lesson.lesson_type
   return (
@@ -131,7 +132,7 @@ function LessonTab({ lesson, words, dialogues }) {
         ) : dialogues.list.length === 0 ? (
           <p style={EMPTY_NOTE}>لا يوجد نص لهذا الحوار بعد</p>
         ) : (
-          <DialogueScript dialogues={dialogues.list} />
+          <DialogueScript dialogues={dialogues.list} unitNumber={unitNumber} />
         )
       )}
 
@@ -167,7 +168,7 @@ function LessonTab({ lesson, words, dialogues }) {
   )
 }
 
-function DialogueTab({ dialogues }) {
+function DialogueTab({ dialogues, unitNumber }) {
   return (
     <div>
       {dialogues.loading ? (
@@ -177,7 +178,7 @@ function DialogueTab({ dialogues }) {
       ) : dialogues.list.length === 0 ? (
         <p style={EMPTY_NOTE}>لا يوجد حوار لهذا الدرس</p>
       ) : (
-        <DialogueBubbles dialogues={dialogues.list} />
+        <DialogueBubbles dialogues={dialogues.list} unitNumber={unitNumber} />
       )}
     </div>
   )
@@ -220,6 +221,8 @@ function VocabularyTab({ words }) {
  * Mount it with `key={lesson.id}` so each lesson starts on its own default tab.
  */
 export default function LessonPanel({ lesson, unitVocab, onClose }) {
+  const { units } = useUnits()
+  const unitNumber = units.find(unit => unit.id === lesson.unit_id)?.unit_number
   useLessonActivity(lesson?.id)
   const [tab, setTab] = useState(() => defaultTab(lesson))
   const [closing, setClosing] = useState(false)
@@ -278,8 +281,8 @@ export default function LessonPanel({ lesson, unitVocab, onClose }) {
         <PanelTabs active={tab} onChange={setTab} />
 
         <div className="lesson-panel-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: 20 }}>
-          {tab === 'lessons' && <LessonTab lesson={lesson} words={displayVocab} dialogues={dialogues} />}
-          {tab === 'hiwar'   && <DialogueTab dialogues={dialogues} />}
+          {tab === 'lessons' && <LessonTab lesson={lesson} words={displayVocab} dialogues={dialogues} unitNumber={unitNumber} />}
+          {tab === 'hiwar'   && <DialogueTab dialogues={dialogues} unitNumber={unitNumber} />}
           {tab === 'vocab'   && <VocabularyTab words={displayVocab} />}
         </div>
       </div>

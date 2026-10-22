@@ -1,4 +1,5 @@
 import DialogueAudio from './DialogueAudio'
+import { resolveDialogueAudio } from './resolveDialogueAudio'
 
 const AMIRI = "'Amiri', serif"
 
@@ -22,7 +23,12 @@ function Narration({ line }) {
 }
 
 /** Dialogues as a script: speaker name beside each line ("الدروس" tab). */
-export function DialogueScript({ dialogues }) {
+function PublishedAudio({ dialogue, unitNumber }) {
+  const media = resolveDialogueAudio(dialogue, unitNumber)
+  return <DialogueAudio key={media.url} {...media} title={dialogue.title_ar} />
+}
+
+export function DialogueScript({ dialogues, unitNumber }) {
   return dialogues.map(dialogue => (
     <div key={dialogue.id} style={{ marginBottom: 24 }}>
       {dialogue.title_ar && (
@@ -35,7 +41,7 @@ export function DialogueScript({ dialogues }) {
           {dialogue.situation_tr}
         </div>
       )}
-      <DialogueAudio key={dialogue.audio_url} url={dialogue.audio_url} title={dialogue.title_ar} partial={dialogue.audio_is_partial} textDiffers={dialogue.audio_text_differs} />
+      <PublishedAudio dialogue={dialogue} unitNumber={unitNumber} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {dialogue.lines?.map((line, i) => isNarration(line) ? <Narration key={i} line={line} /> : (
           <div key={i} style={{
@@ -71,7 +77,7 @@ export function DialogueScript({ dialogues }) {
 }
 
 /** Dialogues as alternating chat bubbles ("الحوار" tab). */
-export function DialogueBubbles({ dialogues }) {
+export function DialogueBubbles({ dialogues, unitNumber }) {
   return dialogues.map(dialogue => (
     <div key={dialogue.id} style={{ marginBottom: 28 }}>
       {dialogue.title_ar && (
@@ -93,7 +99,7 @@ export function DialogueBubbles({ dialogues }) {
         </div>
       )}
 
-      <DialogueAudio key={dialogue.audio_url} url={dialogue.audio_url} title={dialogue.title_ar} partial={dialogue.audio_is_partial} textDiffers={dialogue.audio_text_differs} />
+      <PublishedAudio dialogue={dialogue} unitNumber={unitNumber} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {dialogue.lines?.map((line, i) => {
           if (isNarration(line)) return <Narration key={i} line={line} />
