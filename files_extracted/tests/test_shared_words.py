@@ -1,5 +1,6 @@
 """The shared Arabic–Turkish vocabulary endpoint (public, served from content)."""
 from content.shared_words import CATEGORIES, all_words
+from content.unit_shared_words import UNIT_SHARED_WORDS
 
 
 async def test_shared_words_are_public_and_grouped(client):
@@ -28,7 +29,6 @@ async def test_no_duplicate_arabic_turkish_pairs_within_a_category():
 
 
 # ── the «كلمات مشتركة» tab of each unit ─────────────────────────────────────
-from content.unit_shared_words import UNIT_SHARED_WORDS
 
 
 async def test_every_platform_unit_has_shared_words():
