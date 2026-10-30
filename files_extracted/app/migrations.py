@@ -129,6 +129,28 @@ async def _unique_srs_cards(conn: AsyncConnection) -> None:
     await conn.execute(text("DROP INDEX IF EXISTS ix_srs_cards_student_vocabulary"))
 
 
+async def _add_supplementary_vocabulary(conn: AsyncConnection) -> None:
+    """Add the extra book vocabulary (content/vocabulary_supplement) to existing content.
+
+    Insert-only: no existing row is changed or removed. The words are an
+    enrichment, so a failure here must not stop the server from starting: it
+    is rolled back to a savepoint and logged, and `python -m tools.add_vocabulary
+    --apply` can add the words later (it skips whatever is already there).
+    """
+    from app.services.vocabulary_supplement import add_supplementary_vocabulary
+
+    try:
+        async with conn.begin_nested():
+            result = await add_supplementary_vocabulary(conn, apply=True)
+    except Exception:
+        logger.exception("0010_supplementary_vocabulary: words not added; "
+                         "run `python -m tools.add_vocabulary --apply` to retry")
+        return
+    logger.info("0010_supplementary_vocabulary: added %s word(s) (%s -> %s in total); "
+                "highest vocabulary id before: %s", result.plan.count, result.vocabulary_before,
+                result.vocabulary_after, result.highest_id_before)
+
+
 MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     # Lookups by student were full table scans. Measured on SQLite with 300
     # students: the due-cards query 9.1 ms -> 0.05 ms, a card lookup
@@ -152,6 +174,9 @@ MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     # Exercises replaced by better ones, or beyond the number a unit shows, are
     # hidden instead of deleted, so the answers recorded on them are kept.
     ("0009_exercise_hidden_flag", _add_exercise_hidden_flag),
+    # Extra words from the books' own unit lists, added to the content that is
+    # already there. Insert-only; nothing a student has done is touched.
+    ("0010_supplementary_vocabulary", _add_supplementary_vocabulary),
 )
 
 _CREATE_LOG = text(

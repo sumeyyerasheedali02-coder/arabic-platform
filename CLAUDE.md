@@ -20,6 +20,7 @@ python -m tools.seed --help            # content loading
 python -m tools.migrate --status       # schema migrations
 python -m tools.content_report         # read-only summary of a database
 python -m tools.update_dialogues       # dialogues of a live database (dry run; --apply)
+python -m tools.add_vocabulary         # extra book vocabulary, insert-only (dry run; --apply)
 python -m tools.teacher_accounts list  # teacher provisioning
 ```
 

@@ -9,6 +9,7 @@ writes the rows.
 | What | File | Notes |
 |---|---|---|
 | Units, dialogues, vocabulary, grammar points | `books/book1_part1.py` … `books/book3_part2.py` | 6 parts × 8 units = units 1–48. `books/__init__.py` puts them in course order (`all_units()`). |
+| Extra vocabulary, units 1–32 | `vocabulary_supplement/book*_part*.py` | Words from the books' own unit word lists that the base content lacks. Not loaded by `tools.seed`; see below. |
 | Base exercises, units 1–8 | `exercises/base_units_1_8.py` | Fill-in, translation, matching, synonyms, antonyms, word order, comprehension, plurals. |
 | Grammar questions + unit test, units 1–16 | `exercises/grammar_units_1_16.py` | Supplementary. |
 | Word-order questions, units 9–48 | `exercises/word_order_units_9_48.py` | Supplementary. |
@@ -95,6 +96,30 @@ python -m tools.content_report          # uses DATABASE_URL
      update. `--replace --yes-delete-student-activity` rebuilds everything and
      deletes all answers, progress and review cards. Plan this for a term break,
      or write a targeted migration instead.
+
+## Extra vocabulary
+
+The base content has 998 words. The books list many more per unit, so
+`vocabulary_supplement/` holds the missing words for units 1–32 (books 1 and 2;
+about 980 after the words a database already has are left out). They come from
+the books' own "words by unit" tables; the Turkish and English meanings were
+written for the platform and were handed to the supervising teacher to review.
+
+They are **not** loaded by `tools.seed`. `app/services/vocabulary_supplement.py`
+adds them to a database that already has content, in two ways:
+
+- migration `0010_supplementary_vocabulary`, automatically when the server
+  starts. If it fails it logs the error and the server still starts.
+- `python -m tools.add_vocabulary` (a dry run) and `python -m tools.add_vocabulary --apply`,
+  for a database seeded afterwards, or to retry.
+
+It only INSERTs words. No existing word, student, answer, progress row or review
+card is changed or deleted, a word already present (same unit or any other) is
+skipped, and running it twice adds nothing. Review cards for the new words are
+created when a student adds the unit to their review or rates a word, so no
+student data is written. The new words get no generated exercises; the exercise
+counts above do not change. After `--replace` or on a fresh database, run
+`python -m tools.add_vocabulary --apply` to add them again.
 
 ## Rules the code depends on
 

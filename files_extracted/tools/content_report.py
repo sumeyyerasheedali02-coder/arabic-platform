@@ -17,6 +17,8 @@ from sqlalchemy import func, select
 from app.database import AsyncSessionLocal
 from app.models import Dialogue, DialogueLine, Exercise, Lesson, Unit, Vocabulary
 from app.services.exercise_categories import exercise_category
+from app.services.vocabulary_supplement import plan_additions
+from content.books import all_units
 
 EXPECTED_BASE = dict(units=48, lessons=144, vocabulary=998, dialogues=147,
                      dialogue_lines=1343, exercises=2129)
@@ -72,6 +74,9 @@ async def report(per_unit: bool) -> int:
 
     print(f"\nExpected from tools.seed: {EXPECTED_BASE}")
     print(f"Expected exercises with supplements: {EXPECTED_WITH_SUPPLEMENTS}")
+    extra = plan_additions({u["number"]: [w["word_ar"] for w in u["vocabulary"]] for u in all_units()}).count
+    print(f"Expected vocabulary once the extra book words are added "
+          f"(migration 0010 / tools.add_vocabulary): {EXPECTED_BASE['vocabulary'] + extra}")
     if problems:
         print(f"\n{len(problems)} thing(s) to look at:")
         for line in problems[:40]:
