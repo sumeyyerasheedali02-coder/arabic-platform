@@ -9,9 +9,10 @@ import LessonCard from './LessonCard'
 import LessonPanel from './LessonPanel'
 import UnitHeader from './UnitHeader'
 import UnitPicker from './UnitPicker'
+import UnitSharedWords from './UnitSharedWords'
 import { VocabularyList } from './VocabularyRow'
 
-const PAGE_TABS = [['lessons', 'الدروس'], ['vocab', 'المفردات']]
+const PAGE_TABS = [['lessons', 'الدروس'], ['vocab', 'المفردات'], ['shared', 'كلمات مشتركة']]
 
 const loadUnitContent = (unitId) => Promise.all([
   api.get(`/units/${unitId}/lessons`),
@@ -80,7 +81,9 @@ export default function LessonsPage({ preview = false }) {
                 ))}
               </div>
 
-              {content.loading ? (
+              {tab === 'shared' ? (
+                <UnitSharedWords key={selectedUnit.unit_number} unitNumber={selectedUnit.unit_number} />
+              ) : content.loading ? (
                 <CenteredSpinner size={28} padding={40} />
               ) : content.error ? (
                 <ErrorState compact onRetry={content.reload} />

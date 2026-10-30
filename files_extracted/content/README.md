@@ -10,6 +10,7 @@ writes the rows.
 |---|---|---|
 | Units, dialogues, vocabulary, grammar points | `books/book1_part1.py` … `books/book3_part2.py` | 6 parts × 8 units = units 1–48. `books/__init__.py` puts them in course order (`all_units()`). |
 | Extra vocabulary, units 1–32 | `vocabulary_supplement/book*_part*.py` | Words from the books' own unit word lists that the base content lacks. Not loaded by `tools.seed`; see below. |
+| Shared words per unit | `unit_shared_words.py` | The «كلمات مشتركة» tab of each unit (1–48): `"arabic=turkish"` pairs picked from `shared_words.py` by topic. A pair missing from that dataset fails at import. Served by `/api/shared-words/units/{unit_number}`; no table, no migration. |
 | Base exercises, units 1–8 | `exercises/base_units_1_8.py` | Fill-in, translation, matching, synonyms, antonyms, word order, comprehension, plurals. |
 | Grammar questions + unit test, units 1–16 | `exercises/grammar_units_1_16.py` | Supplementary. |
 | Word-order questions, units 9–48 | `exercises/word_order_units_9_48.py` | Supplementary. |
