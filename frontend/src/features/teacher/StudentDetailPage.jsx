@@ -43,6 +43,45 @@ function SectionCorrection({ student, onSaved }) {
   </section>
 }
 
+function PasswordReset({ student }) {
+  const [asking, setAsking] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [password, setPassword] = useState('')
+  const [copied, setCopied] = useState(false)
+  async function reset() {
+    setBusy(true); setError(''); setCopied(false)
+    try {
+      const { data } = await api.post(`/teacher/students/${student.student_id}/reset-password`)
+      setPassword(data.temporary_password); setAsking(false)
+    } catch (err) { setError(apiError(err)) }
+    finally { setBusy(false) }
+  }
+  async function copy() {
+    try { await navigator.clipboard.writeText(password); setCopied(true) } catch { /* the password stays visible to copy by hand */ }
+  }
+  return <section className="staff-panel">
+    <h2>نسيان كلمة المرور</h2>
+    <p className="staff-intro">إذا نسي الطالب كلمة المرور ولم تصله رسالة الاستعادة، أنشئ له كلمة مرور مؤقتة وأعطه إياها.
+      تُغلق جلساته الحالية، ويغيّرها بنفسه من «إعدادات الحساب» بعد الدخول.</p>
+    {!password && !asking && <button className="staff-button" onClick={() => setAsking(true)}>إعادة تعيين كلمة المرور</button>}
+    {asking && <div className="staff-toolbar">
+      <span>هل تريد إنشاء كلمة مرور جديدة لـ {student.name}؟ لن تعمل كلمة مروره القديمة.</span>
+      <button className="staff-primary" disabled={busy} onClick={reset}>{busy ? 'جارٍ الإنشاء…' : 'نعم، أنشئ كلمة مؤقتة'}</button>
+      <button className="staff-button" disabled={busy} onClick={() => setAsking(false)}>إلغاء</button>
+    </div>}
+    {password && <div role="status" className="staff-success">
+      <p>كلمة المرور المؤقتة لـ {student.name} — تظهر هذه المرة فقط:</p>
+      <p><strong dir="ltr" style={{ fontFamily: 'monospace', fontSize: 22, letterSpacing: 2, userSelect: 'all' }}>{password}</strong></p>
+      <div className="staff-toolbar">
+        <button className="staff-button" onClick={copy}>{copied ? 'تم النسخ' : 'نسخ'}</button>
+        <button className="staff-button" onClick={() => { setPassword(''); setCopied(false) }}>إخفاء</button>
+      </div>
+    </div>}
+    {error && <StaffMessage error={error} />}
+  </section>
+}
+
 export default function StudentDetailPage() {
   const { studentId } = useParams()
   const { student: account } = useAuth()
@@ -85,6 +124,7 @@ export default function StudentDetailPage() {
     ]} />
     {account.is_admin && <SectionCorrection key={student.student_id} student={student}
       onSaved={() => { report.reload(); sections.reload() }} />}
+    <PasswordReset key={`reset-${student.student_id}`} student={student} />
     <section className="staff-panel">
       <div className="staff-toolbar"><h2>التقدّم في الدروس</h2>
         <label><input type="checkbox" checked={onlyStarted}

@@ -1,14 +1,16 @@
 """Teacher reports restricted to assigned sections; admins see all students."""
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+import secrets
+
+from fastapi import APIRouter, Depends, Query, Response
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Exercise, ExerciseAnswer, Student, TeacherSection
 from app.schemas import ClassSection, SectionInfo, StudentSummary, UnitStats
-from app.security import get_current_account, get_current_teacher
+from app.security import get_current_account, get_current_teacher, hash_password
 from app.services import reporting
-from app.services.staff import allowed_sections, authorized_student
+from app.services.staff import allowed_sections, audit, authorized_student
 
 router = APIRouter(prefix="/api/teacher", tags=["teacher"],
                    dependencies=[Depends(get_current_teacher)])
@@ -75,3 +77,28 @@ async def student_details(
 ):
     await authorized_student(db, account, student_id)
     return await reporting.student_details(db, student_id)
+
+
+# No 0/O, 1/l/I: the password is read aloud or copied by hand to the student.
+_TEMPORARY_ALPHABET = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+TEMPORARY_PASSWORD_LENGTH = 10
+
+
+@router.post("/students/{student_id}/reset-password")
+async def reset_student_password(
+    student_id: int, response: Response, account: Student = Depends(get_current_account),
+    db: AsyncSession = Depends(get_db),
+):
+    """Give a student who forgot the password a temporary one (shown once to the teacher).
+
+    Allowed for the student's own teachers and for admins. Every session the student
+    still has is revoked, and the audit trail records who did it, never the password.
+    """
+    student = await authorized_student(db, account, student_id)
+    temporary = "".join(secrets.choice(_TEMPORARY_ALPHABET) for _ in range(TEMPORARY_PASSWORD_LENGTH))
+    await db.execute(update(Student).where(Student.id == student.id).values(
+        password_hash=hash_password(temporary), token_version=Student.token_version + 1))
+    audit(db, account, student, "student_password_reset", {"password_reset": True})
+    await db.commit()
+    response.headers["Cache-Control"] = "no-store"
+    return {"temporary_password": temporary}

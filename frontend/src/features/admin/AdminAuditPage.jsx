@@ -10,11 +10,13 @@ const ACTIONS = {
   teacher_created: 'إنشاء حساب أستاذ',
   teacher_updated: 'تعديل حساب أستاذ',
   student_section_changed: 'تصحيح شعبة طالب',
+  student_password_reset: 'إعادة تعيين كلمة مرور طالب',
 }
 const sectionText = list => list?.length ? list.join('، ') : 'لا توجد'
 function describe(item) {
   const d = item.details
   if (item.action === 'teacher_created') return `الشُّعَب: ${sectionText(d.sections)}`
+  if (item.action === 'student_password_reset') return 'كلمة مرور مؤقتة بدل المنسية'
   if (item.action === 'student_section_changed') return `الشعبة: ${d.previous_section || 'غير محددة'} ← ${d.class_section}`
   return `الشُّعَب: ${sectionText(d.previous_sections)} ← ${sectionText(d.sections)} · ${d.is_active ? 'الحساب نشط' : 'الحساب معطّل'}${d.password_reset ? ' · أُعيد تعيين كلمة المرور' : ''}`
 }

@@ -20,7 +20,8 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 @router.get("/audit")
 async def audit_log(
     offset: int = Query(0, ge=0), limit: int = Query(25, ge=1, le=100),
-    action: Literal["teacher_created", "teacher_updated", "student_section_changed"] | None = None,
+    action: Literal["teacher_created", "teacher_updated", "student_section_changed",
+                    "student_password_reset"] | None = None,
     admin: Student = Depends(get_current_admin), db: AsyncSession = Depends(get_db),
 ):
     actor, target = aliased(Student), aliased(Student)
