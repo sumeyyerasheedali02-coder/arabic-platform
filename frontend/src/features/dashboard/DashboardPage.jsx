@@ -37,10 +37,10 @@ export default function DashboardPage() {
   if (unitsError && units.length === 0) return <ErrorState onRetry={reloadUnits} />
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 20px' }}>
+    <div className="dashboard-page" style={{ maxWidth: 1000, margin: '0 auto', padding: '28px 20px' }}>
 
       {/* Welcome banner */}
-      <div style={{
+      <div className="dashboard-welcome" style={{
         background: 'var(--navy)', borderRadius: 16, padding: '24px 28px', marginBottom: 24,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
       }}>
@@ -62,7 +62,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+      <div className="dashboard-stats" style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
         <StatCard icon="📖" label="الوحدات المتاحة"  value={units.length} />
         <StatCard icon="✅" label="الدروس المكتملة"   value={lessonsDone} />
         <StatCard icon="⭐" label="مجموع النقاط"      value={totalScore} />
@@ -78,7 +78,7 @@ export default function DashboardPage() {
           { to: '/exercises', icon: '✏️', label: 'التمارين',      desc: 'تدرب وحسّن مستواك' },
           { to: '/chat',      icon: '🤖', label: 'المساعد الذكي', desc: 'تحدث بالعربية'     },
           { to: '/srs',       icon: '🗂️', label: 'البطاقات',      desc: `${dueCards} بطاقة` },
-        ].map(({ to, icon, label, desc }) => (
+        ].filter(item => item.to !== '/chat' || (token && student)).map(({ to, icon, label, desc }) => (
           <Link
             key={to}
             to={to}

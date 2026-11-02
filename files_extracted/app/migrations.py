@@ -151,6 +151,12 @@ async def _add_supplementary_vocabulary(conn: AsyncConnection) -> None:
                 result.vocabulary_after, result.highest_id_before)
 
 
+async def _add_practice_sessions(conn: AsyncConnection) -> None:
+    from app.models import PracticeSession
+
+    await conn.run_sync(lambda sync: PracticeSession.__table__.create(sync, checkfirst=True))
+
+
 MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     # Lookups by student were full table scans. Measured on SQLite with 300
     # students: the due-cards query 9.1 ms -> 0.05 ms, a card lookup
@@ -177,6 +183,7 @@ MIGRATIONS: tuple[tuple[str, MigrationAction], ...] = (
     # Extra words from the books' own unit lists, added to the content that is
     # already there. Insert-only; nothing a student has done is touched.
     ("0010_supplementary_vocabulary", _add_supplementary_vocabulary),
+    ("0011_student_practice_sessions", _add_practice_sessions),
 )
 
 _CREATE_LOG = text(

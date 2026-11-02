@@ -180,8 +180,10 @@ async def test_the_command_line_tool_reports_without_changing_anything(content, 
 
 # ── Migration 0010 ────────────────────────────────────────────
 
-def test_the_migration_is_registered_last():
-    assert migrations.MIGRATIONS[-1][0] == "0010_supplementary_vocabulary"
+def test_the_migration_is_registered_after_hidden_exercises():
+    names = [name for name, _ in migrations.MIGRATIONS]
+    assert names.count("0010_supplementary_vocabulary") == 1
+    assert names.index("0010_supplementary_vocabulary") == names.index("0009_exercise_hidden_flag") + 1
 
 
 async def test_the_migration_adds_the_words(content):

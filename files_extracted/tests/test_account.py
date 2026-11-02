@@ -77,3 +77,37 @@ async def test_password_length_and_auth_required(client, register):
     for password in ['short', 'ع' * 40]:
         assert (await client.post('/api/account/password', headers=person.headers,
                                  json={'current_password': 'secret123', 'password': password})).status_code == 422
+
+
+@pytest.mark.parametrize("claims", [
+    {"sub": "1", "ver": 0, "purpose": "password-reset"},
+    {"sub": "1", "ver": False, "purpose": "password-reset", "exp": 9999999999},
+])
+async def test_reset_rejects_missing_expiry_or_boolean_version(client, register, claims):
+    from jose import jwt
+
+    from app.config import get_settings
+
+    settings = get_settings()
+    person = await register()
+    token = jwt.encode({**claims, "sub": str(person.id)}, settings.secret_key, algorithm=settings.algorithm)
+    response = await client.post('/api/account/reset-password', json={
+        'token': token, 'password': 'new-password'})
+    assert response.status_code == 400
+    assert (await client.get("/api/auth/me", headers=person.headers)).status_code == 200
+
+
+async def test_mail_failure_does_not_reveal_account_or_reset_password(client, register, login, monkeypatch):
+    person = await register(password='old-password')
+    email = (await client.get('/api/account/me', headers=person.headers)).json()['email']
+    monkeypatch.setattr(account, 'mail_ready', lambda: True)
+
+    def fail_delivery(*args):
+        raise OSError('simulated provider outage')
+
+    monkeypatch.setattr(account, 'send_reset_email', fail_delivery)
+    known = await client.post('/api/account/forgot-password', json={'email': email})
+    unknown = await client.post('/api/account/forgot-password', json={'email': 'unknown@example.com'})
+    assert known.status_code == unknown.status_code == 200
+    assert known.json() == unknown.json()
+    assert (await login(email, 'old-password')).status_code == 200

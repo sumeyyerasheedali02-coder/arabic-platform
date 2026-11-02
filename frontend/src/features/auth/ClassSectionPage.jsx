@@ -59,7 +59,7 @@ export default function ClassSectionPage() {
   if (!needsNumber && !needsSection) return <Navigate to="/lessons" replace />
 
   return (
-    <main dir={lang === 'ar' ? 'rtl' : 'ltr'} style={{
+    <main className="profile-completion" dir={lang === 'ar' ? 'rtl' : 'ltr'} style={{
       minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: 24, background: 'var(--aq-ivory)', fontFamily: 'var(--aq-font-arabic)',
     }}>

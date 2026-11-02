@@ -19,6 +19,20 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+class PracticeSession(Base):
+    __tablename__ = "student_practice_sessions"
+    student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)
+    unit_id = Column(Integer, ForeignKey("units.id", ondelete="CASCADE"), primary_key=True)
+    filter_key = Column(String(30), primary_key=True)
+    session_id = Column(String(36), nullable=False, unique=True)
+    content_signature = Column(String(64), nullable=False)
+    exercise_ids = Column(JSON, nullable=False)
+    results = Column(JSON, nullable=False, default=list)
+    current_index = Column(Integer, nullable=False, default=0)
+    completed = Column(Boolean, nullable=False, default=False)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+
+
 class ActivityClock(Base):
     __tablename__ = "student_activity_clocks"
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), primary_key=True)

@@ -1,56 +1,45 @@
 import { lessonColor, lessonLabel } from './lessonTypes'
 
-/** One lesson in the unit's grid; opens the lesson panel. */
-export default function LessonCard({ lesson, onOpen }) {
-  const dotColor = lessonColor(lesson)
+function CardIcon({ exercise, grammar }) {
   return (
-    <button
-      onClick={() => onOpen(lesson)}
-      style={{
-        background: '#fff', border: '1px solid var(--border)', borderRadius: 12,
-        padding: '16px 18px', textAlign: 'right', cursor: 'pointer',
-        transition: 'all .18s', fontFamily: 'DM Sans, sans-serif',
-        display: 'flex', gap: 12, alignItems: 'flex-start',
-        boxShadow: '0 1px 3px rgba(0,0,0,.04)',
-      }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(15,32,68,.08)' }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,.04)' }}
-    >
-      <div style={{
-        width: 36, height: 36, borderRadius: 9, flexShrink: 0,
-        background: `${dotColor}18`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        border: `1px solid ${dotColor}30`,
-      }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: dotColor }} />
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {exercise ? <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4V2h6v2M9 10l1 1 2-2M14 10h2M9 16l1 1 2-2M14 16h2" /></>
+        : grammar ? <><rect x="2" y="3" width="6" height="6" rx="1" fill="currentColor" stroke="none" /><rect x="16" y="15" width="6" height="6" rx="1" fill="currentColor" stroke="none" /><path d="M5 12v6h7M11 6h8v6" /></>
+          : <><path d="M14 15H8l-4 3v-5a6 6 0 1 1 10 2Z" fill="currentColor" fillOpacity=".85" /><path d="M15 9a5 5 0 0 1 5 8v4l-4-2h-3" /></>}
+    </svg>
+  )
+}
+
+/** Lesson entry, or the unit practice entry replacing its duplicate vocabulary card. */
+export default function LessonCard({ lesson, onOpen, exercise = false, unitNumber, progress, progressAvailable = false }) {
+  const color = exercise ? '#278664' : lessonColor(lesson)
+  const isComplete = !exercise && progressAvailable && progress?.status === 'completed'
+  const isStarted = !exercise && progressAvailable && !isComplete && progress?.status === 'in_progress'
+  const percent = !exercise && progressAvailable && !isStarted ? (isComplete ? 100 : 0) : null
+  const status = isComplete ? 'مكتمل' : isStarted ? 'قيد التقدّم' : progressAvailable && !exercise ? 'لم يبدأ' : null
+  const rules = lesson.grammar_focus?.split('|').map(rule => rule.trim()).filter(Boolean) ?? []
+  const detail = exercise ? 'تدريب على دروس الوحدة' : lesson.lesson_type === 'nahw'
+    ? rules.length === 1 ? 'قاعدة نحوية واحدة' : rules.length === 2 ? 'قاعدتان نحويتان' : rules.length ? `${rules.length} قواعد نحوية` : 'شرح القواعد والتراكيب'
+    : lesson.lesson_type === 'hiwar' ? 'قراءة الحوارات والاستماع' : 'محتوى الدرس'
+
+  return (
+    <button className={`lesson-entry-card${exercise ? ' lesson-entry-practice' : ''}`} style={{ '--lesson-color': color, '--lesson-tint': `${color}16` }} onClick={() => onOpen(lesson)}>
+      <div className="lesson-entry-top">
+        <span className="lesson-entry-icon"><CardIcon exercise={exercise} grammar={lesson.lesson_type === 'nahw'} /></span>
+        <span className="lesson-entry-kicker">{exercise ? `تدريب · الوحدة ${unitNumber}` : lessonLabel(lesson)}</span>
+        <span className="lesson-entry-sequence" dir="ltr" aria-hidden="true">{String(lesson.lesson_number).padStart(2, '0')}</span>
       </div>
-      <div style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{
-            fontSize: 10, color: dotColor, fontWeight: 600,
-            background: `${dotColor}15`, borderRadius: 4, padding: '1px 6px',
-          }}>
-            {lessonLabel(lesson)}
-          </span>
-          <span style={{ fontSize: 10, color: 'var(--muted)' }}>
-            درس {lesson.lesson_number}
-          </span>
-        </div>
-        <div style={{ fontFamily: "'Amiri', serif", fontSize: 15, color: 'var(--navy)', lineHeight: 1.4 }}>
-          {lesson.title_ar}
-        </div>
-        {lesson.title_tr && (
-          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-            {lesson.title_tr}
-          </div>
-        )}
-        {lesson.grammar_focus && (
-          <div style={{ fontSize: 11, color: '#7c3aed', marginTop: 5, fontFamily: "'Amiri', serif" }}>
-            {lesson.grammar_focus.split('|')[0].trim()}...
-          </div>
-        )}
+      <div className="lesson-entry-titles">
+        <h2>{exercise ? 'تمرينات الوحدة' : lesson.title_ar}</h2>
+        {(exercise || lesson.title_tr) && <p lang="tr" dir="ltr">{exercise ? 'Ünite alıştırmaları' : lesson.title_tr}</p>}
       </div>
-      <div style={{ color: 'var(--muted)', fontSize: 14, marginTop: 8, flexShrink: 0 }}>›</div>
+      <p className="lesson-entry-detail">{detail}</p>
+      <div className="lesson-entry-footer">
+        <span className="lesson-entry-action">{exercise ? 'ابدأ التدريب' : isStarted ? 'أكمل الدرس' : isComplete ? 'راجع الدرس' : 'افتح الدرس'}</span>
+        {status && <span className="lesson-entry-status">{isComplete && <span aria-hidden="true">✓</span>}{status}{percent !== null && <span dir="ltr">{percent}%</span>}</span>}
+        <span className="lesson-entry-arrow" aria-hidden="true">←</span>
+      </div>
+      {percent !== null && <span className="lesson-entry-track" aria-hidden="true"><span style={{ width: `${percent}%` }} /></span>}
     </button>
   )
 }

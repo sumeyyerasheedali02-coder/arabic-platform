@@ -30,7 +30,7 @@ export default function PasswordRecoveryPage({ reset = false }) {
     } catch (err) { setError(apiError(err)) }
     finally { setBusy(false) }
   }
-  return <main className="account-recovery" dir="rtl"><section className="account-panel">
+  return <main className="account-recovery" dir="rtl"><meta name="referrer" content="no-referrer" /><section className="account-panel">
     <BrandMark size={84} />
     <h1>{reset ? 'تعيين كلمة مرور جديدة' : 'استعادة كلمة المرور'}</h1>
     {message ? <p className="account-success" role="status">{message}</p>
@@ -42,6 +42,7 @@ export default function PasswordRecoveryPage({ reset = false }) {
       ? <p role="alert">رابط الاستعادة غير مكتمل. اطلب رابطًا جديدًا.</p>
       : <form onSubmit={submit}>
         {reset ? <>
+          <p className="account-hint">اختر كلمة مرور من 8 أحرف على الأقل.</p>
           <label htmlFor="recovery-password">كلمة المرور الجديدة</label>
           <input id="recovery-password" type="password" required minLength={8} maxLength={72} autoComplete="new-password"
             value={password} onChange={e => setPassword(e.target.value)} disabled={busy} />
@@ -58,6 +59,6 @@ export default function PasswordRecoveryPage({ reset = false }) {
         <button disabled={busy}>{busy ? 'جارٍ الإرسال…' : reset ? 'حفظ كلمة المرور' : 'إرسال رابط الاستعادة'}</button>
       </form>}
     <Link to="/login">العودة لتسجيل الدخول</Link>
-    {reset && !token && <Link to="/forgot-password">طلب رابط جديد</Link>}
+    {reset && !message && <Link to="/forgot-password">طلب رابط جديد</Link>}
   </section></main>
 }

@@ -21,7 +21,7 @@ function KBULogo() {
 // unit opens its lessons.
 const UNIT_PAGES = ['/lessons', '/exercises']
 
-export default function Sidebar({ open, onNavigate }) {
+export default function Sidebar({ open, phone, sidebarRef, onNavigate }) {
   const { student, logout } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -37,18 +37,19 @@ export default function Sidebar({ open, onNavigate }) {
   const totalLessons    = units.reduce((s, u) => s + (u.total_lessons || 0), 0)
   const doneLessons     = completedLessons(progress).length
   const progressPct     = totalLessons > 0 ? Math.round((doneLessons / totalLessons) * 100) : 0
-  if (student?.is_teacher || student?.is_admin) return <StaffSidebar open={open} onNavigate={onNavigate} />
+  if (student?.is_teacher || student?.is_admin) return <StaffSidebar open={open} phone={phone} sidebarRef={sidebarRef} onNavigate={onNavigate} />
 
   return (
-    <aside className={`app-sidebar${open ? ' open' : ''}`} style={{
+    <aside id="app-sidebar" ref={sidebarRef} inert={phone && !open} role={open ? 'dialog' : undefined} aria-modal={open || undefined} aria-label="الوحدات والحساب" tabIndex={-1} className={`app-sidebar${open ? ' open' : ''}`} style={{
       background: 'var(--navy)',
       display: 'flex',
       flexDirection: 'column',
       borderLeft: '1px solid rgba(255,255,255,.06)',
     }}>
-      {/* KBU + Researcher */}
+      <button className="sidebar-close" onClick={onNavigate} aria-label="إغلاق القائمة">×</button>
+      {/* University identity */}
       <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid rgba(201,168,76,.2)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <KBULogo />
           <div>
             <div style={{ fontSize: 11, color: '#fff', fontWeight: 500 }}>Karabük Üniversitesi</div>
@@ -57,34 +58,20 @@ export default function Sidebar({ open, onNavigate }) {
             </div>
           </div>
         </div>
-        <div style={{
-          background: 'rgba(201,168,76,.08)',
-          border: '1px solid rgba(201,168,76,.2)',
-          borderRadius: 9, padding: '10px 12px',
-        }}>
-          <div style={{ fontSize: 9, color: '#C9A84C', letterSpacing: '.1em', fontWeight: 500, marginBottom: 3 }}>
-            RESEARCHER
-          </div>
-          <div style={{ fontSize: 12.5, fontWeight: 500, color: '#fff' }}>MUSTAFA AHMED</div>
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', marginTop: 2 }}>
-            AI &amp; Language Technology · M.Sc.
-          </div>
-        </div>
       </div>
 
-      {/* Units list */}
-      <nav className="sidebar-units" style={{ flex: 1, overflowY: 'auto', padding: '12px 0 4px' }}>
-        <div style={{
-          fontSize: 9, letterSpacing: '.12em', color: 'rgba(255,255,255,.3)',
-          padding: '0 16px 8px', fontWeight: 500,
-        }}>
-          UNITS — الوحدات
-        </div>
-
+      {/* Keep the title outside the scrolling unit list. */}
+      <div id="sidebar-units-title" style={{
+        fontSize: 12, letterSpacing: '.07em', color: 'rgba(255,255,255,.5)',
+        padding: '14px 16px 10px', fontWeight: 600,
+      }}>
+        UNITS — الوحدات
+      </div>
+      <nav className="sidebar-units" aria-labelledby="sidebar-units-title" style={{ flex: 1, overflowY: 'auto', padding: '0 0 4px' }}>
         {units.map((unit, i) => {
           const isActive = selectedUnit?.id === unit.id
           return (
-            <div
+            <button type="button" className="sidebar-unit" aria-current={isActive ? 'true' : undefined}
               key={unit.id}
               onClick={() => openUnit(unit)}
               style={{
@@ -108,17 +95,17 @@ export default function Sidebar({ open, onNavigate }) {
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
-                  fontSize: 11, fontFamily: "'Amiri', serif",
+                  fontSize: 13, fontFamily: "'Amiri', serif",
                   color: isActive ? '#fff' : 'rgba(255,255,255,.8)',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {unit.title_ar}
                 </div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,.35)', marginTop: 1 }}>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 1 }}>
                   {unit.title_tr}
                 </div>
               </div>
-            </div>
+            </button>
           )
         })}
       </nav>
@@ -127,7 +114,7 @@ export default function Sidebar({ open, onNavigate }) {
       <div style={{ padding: 16, borderTop: '1px solid rgba(255,255,255,.06)' }}>
         {student && <Link to="/account" onClick={onNavigate} style={{ display: 'block', marginBottom: 12,
           color: '#E8D48A', fontSize: 12, textDecoration: 'none' }}>إعدادات الحساب</Link>}
-        {!student?.is_teacher && !student?.is_admin && <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 9, padding: '10px 12px', marginBottom: 10 }}>
+        {student && !student.is_teacher && !student.is_admin && <div style={{ background: 'rgba(255,255,255,.06)', borderRadius: 9, padding: '10px 12px', marginBottom: 10 }}>
           <div style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', marginBottom: 6, letterSpacing: '.08em' }}>
             OVERALL PROGRESS
           </div>

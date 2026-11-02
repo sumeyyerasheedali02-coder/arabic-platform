@@ -34,7 +34,7 @@ export default function SharedWordsPage() {
   if (query.error) return <ErrorState onRetry={query.reload} />
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
+    <div className="shared-words-page" style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
       {/* Heading */}
       <div style={{ marginBottom: 6 }}>
         <h1 style={{ fontFamily: "'Amiri', serif", fontSize: 26, color: 'var(--navy)', margin: 0 }}>
@@ -64,7 +64,7 @@ export default function SharedWordsPage() {
       />
 
       {/* Category chips */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+      <div className="shared-word-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
         <Chip active={category === 'all'} onClick={() => setCategory('all')}>الكل</Chip>
         {categories.map((c) => (
           <Chip key={c.key} active={category === c.key} onClick={() => setCategory(c.key)}>
@@ -118,6 +118,7 @@ function Chip({ active, onClick, children }) {
   return (
     <button
       onClick={onClick}
+      aria-pressed={active}
       style={{
         padding: '5px 12px', borderRadius: 20, fontSize: 11.5, fontWeight: 500, cursor: 'pointer',
         border: '1px solid ' + (active ? 'var(--navy)' : 'var(--border)'),

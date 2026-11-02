@@ -69,7 +69,7 @@ export default function LessonDetailPage() {
   const hasContent = lesson.content_ar || lesson.grammar_focus || dialogues.length > 0;
 
   return (
-    <div style={{minHeight:"100vh",background:"#F5F0E8",fontFamily:"'Segoe UI','Noto Sans Arabic',sans-serif",direction:"rtl"}}>
+    <div className="lesson-detail-page" style={{minHeight:"100%",background:"#F5F0E8",fontFamily:"'Segoe UI','Noto Sans Arabic',sans-serif",direction:"rtl"}}>
       <header style={{background:"#1a2744",color:"#F5F0E8",padding:"1rem 1.5rem",display:"flex",alignItems:"center",gap:"1rem",borderBottom:"2px solid #C9A84C"}}>
         <button onClick={goBack} style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",color:"#F5F0E8",borderRadius:"8px",padding:"0.5rem 1rem",cursor:"pointer",fontSize:"14px"}}>
           ← العودة

@@ -25,12 +25,12 @@ const VARIANTS = {
 export default function VocabularyRow({ word, variant }) {
   const look = VARIANTS[variant]
   return (
-    <div style={{
+    <div className="vocabulary-row" style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       border: '1px solid var(--border)', borderRadius: 10,
       ...look.row,
     }}>
-      <div>
+      <div className="vocabulary-word">
         <span style={{ fontFamily: AMIRI, fontSize: look.wordSize, color: 'var(--navy)' }}>
           {word.word_ar}
         </span>
@@ -50,7 +50,7 @@ export default function VocabularyRow({ word, variant }) {
         )}
       </div>
       {look.english ? (
-        <div style={{
+        <div className="vocabulary-translation" style={{
           textAlign: 'left', flexShrink: 0,
           ...(look.translationMarginRight ? { marginRight: look.translationMarginRight } : {}),
         }}>

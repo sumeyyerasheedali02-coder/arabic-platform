@@ -1,35 +1,24 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import api from '../../api/client'
 import { useApiData } from '../../api/useApiData'
 import ErrorState from '../../components/ErrorState'
 import { CenteredSpinner } from '../../components/Spinner'
-import { DialogueBubbles, DialogueScript } from './DialogueViews'
+import { DialogueBubbles } from './DialogueViews'
 import GrammarRules from './GrammarRules'
 import { VocabularyList } from './VocabularyRow'
 import { lessonColor, lessonLabel } from './lessonTypes'
 import { useLessonActivity } from '../activity/useLessonActivity'
 import { useUnits } from '../units/useUnits'
-
-const TABS = [
-  { key: 'lessons', label: 'الدروس' },
-  { key: 'hiwar',   label: 'الحوار' },
-  { key: 'vocab',   label: 'المفردات' },
-]
-
-// The tab a lesson opens on
-const defaultTab = (lesson) => (
-  lesson.lesson_type === 'mufradat' ? 'vocab' : lesson.lesson_type === 'hiwar' ? 'hiwar' : 'lessons'
-)
-const hasDialogues = (lesson) => lesson.lesson_type === 'hiwar' || lesson.lesson_type === 'nahw'
+import { useOverlayFocus } from '../../components/useOverlayFocus'
 
 const SECTION_LABEL = { fontSize: 10, color: 'var(--muted)', letterSpacing: '.08em', fontWeight: 500 }
 const EMPTY_NOTE = { color: 'var(--muted)', textAlign: 'center', padding: '40px 0', fontSize: 13 }
 
 function PanelHeader({ lesson, onBack }) {
   return (
-    <div style={{
+    <div className="lesson-panel-header" style={{
       padding: '12px 20px 14px', borderBottom: '1px solid var(--border)',
       background: 'var(--navy)', flexShrink: 0,
     }}>
@@ -61,7 +50,7 @@ function PanelHeader({ lesson, onBack }) {
               {lessonLabel(lesson)} · درس {lesson.lesson_number}
             </span>
           </div>
-          <h2 style={{ fontFamily: "'Amiri', serif", fontSize: 18, color: '#fff', lineHeight: 1.3 }}>
+          <h2 id="lesson-panel-title" style={{ fontFamily: "'Amiri', serif", fontSize: 18, color: '#fff', lineHeight: 1.3 }}>
             {lesson.title_ar}
           </h2>
           {lesson.title_tr && (
@@ -70,6 +59,7 @@ function PanelHeader({ lesson, onBack }) {
         </div>
         <button
           onClick={onBack}
+          aria-label="إغلاق الدرس"
           style={{
             background: 'rgba(255,255,255,.1)', border: 'none', cursor: 'pointer',
             width: 28, height: 28, borderRadius: 6,
@@ -84,57 +74,13 @@ function PanelHeader({ lesson, onBack }) {
   )
 }
 
-function PanelTabs({ active, onChange }) {
-  return (
-    <div style={{
-      display: 'flex', borderBottom: '1px solid var(--border)',
-      background: '#fff', padding: '0 20px', gap: 4,
-      overflowX: 'auto', flexShrink: 0,
-    }}>
-      {TABS.map(({ key, label }) => (
-        <button
-          key={key}
-          onClick={() => onChange(key)}
-          className={active === key ? 'tab-active' : 'tab-inactive'}
-          style={{
-            padding: '10px 14px', fontSize: 12.5, fontWeight: 500,
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontFamily: 'DM Sans, sans-serif', transition: 'all .15s',
-          }}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-/** "الدروس" tab: what is shown depends on the kind of lesson. */
-function LessonTab({ lesson, words, dialogues, unitNumber }) {
+/** Grammar and other lesson content shown directly below the panel header. */
+function LessonContent({ lesson }) {
   const navigate = useNavigate()
   const type = lesson.lesson_type
   return (
     <div>
       {lesson.grammar_focus && <GrammarRules grammarFocus={lesson.grammar_focus} />}
-
-      {type === 'mufradat' && words.length > 0 && (
-        <>
-          <div style={{ ...SECTION_LABEL, marginBottom: 12 }}>المفردات — VOCABULARY</div>
-          <VocabularyList words={words} variant="compact" />
-        </>
-      )}
-
-      {type === 'hiwar' && (
-        dialogues.loading ? (
-          <CenteredSpinner size={24} padding={40} />
-        ) : dialogues.error ? (
-          <ErrorState compact onRetry={dialogues.reload} />
-        ) : dialogues.list.length === 0 ? (
-          <p style={EMPTY_NOTE}>لا يوجد نص لهذا الحوار بعد</p>
-        ) : (
-          <DialogueScript dialogues={dialogues.list} unitNumber={unitNumber} />
-        )
-      )}
 
       {(type === 'tadrib' || type === 'aswat') && (
         <div style={{
@@ -218,17 +164,18 @@ function VocabularyTab({ words }) {
 
 /**
  * Slide-in window showing one lesson: full screen on mobile, side panel on desktop.
- * Mount it with `key={lesson.id}` so each lesson starts on its own default tab.
+ * Each lesson opens directly on its own content without a secondary tab bar.
  */
 export default function LessonPanel({ lesson, unitVocab, onClose }) {
   const { units } = useUnits()
   const unitNumber = units.find(unit => unit.id === lesson.unit_id)?.unit_number
   useLessonActivity(lesson?.id)
-  const [tab, setTab] = useState(() => defaultTab(lesson))
   const [closing, setClosing] = useState(false)
   const requestClose = useCallback(() => setClosing(true), [])
+  const panelRef = useRef(null)
+  useOverlayFocus(panelRef, true, requestClose, '#root')
   const query = useApiData(
-    hasDialogues(lesson) ? `dialogues:${lesson.id}` : null,
+    lesson.lesson_type === 'hiwar' ? `dialogues:${lesson.id}` : null,
     () => api.get(`/lessons/${lesson.id}/dialogues`).then(r => r.data),
   )
   const dialogues = { list: query.data ?? [], loading: query.loading, error: query.error, reload: query.reload }
@@ -244,17 +191,6 @@ export default function LessonPanel({ lesson, unitVocab, onClose }) {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [])
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        requestClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [requestClose])
 
   // Keep the panel mounted until its exit animation finishes. The timer also
   // closes it if animations are disabled or an animation-end event is missed.
@@ -272,18 +208,21 @@ export default function LessonPanel({ lesson, unitVocab, onClose }) {
       <div className="lesson-panel-backdrop" onClick={requestClose} />
 
       <div
+        ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="lesson-panel-title" tabIndex={-1}
         className="lesson-panel"
         onAnimationEnd={(event) => {
           if (closing && event.target === event.currentTarget) onClose()
         }}
       >
         <PanelHeader lesson={lesson} onBack={requestClose} />
-        <PanelTabs active={tab} onChange={setTab} />
-
         <div className="lesson-panel-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: 20 }}>
-          {tab === 'lessons' && <LessonTab lesson={lesson} words={displayVocab} dialogues={dialogues} unitNumber={unitNumber} />}
-          {tab === 'hiwar'   && <DialogueTab dialogues={dialogues} unitNumber={unitNumber} />}
-          {tab === 'vocab'   && <VocabularyTab words={displayVocab} />}
+          {lesson.lesson_type === 'hiwar' ? (
+            <DialogueTab dialogues={dialogues} unitNumber={unitNumber} />
+          ) : lesson.lesson_type === 'mufradat' ? (
+            <VocabularyTab words={displayVocab} />
+          ) : (
+            <LessonContent lesson={lesson} />
+          )}
         </div>
       </div>
     </div>,

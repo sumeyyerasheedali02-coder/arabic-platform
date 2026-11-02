@@ -5,7 +5,7 @@ import { useUnits } from '../features/units/useUnits'
 import { staffLinks } from './staffNavigation'
 import '../features/teacher/staff.css'
 
-export default function StaffSidebar({ open, onNavigate }) {
+export default function StaffSidebar({ open, phone, sidebarRef, onNavigate }) {
   const { student, logout } = useAuth()
   const { pathname, search } = useLocation()
   const navigate = useNavigate()
@@ -14,7 +14,8 @@ export default function StaffSidebar({ open, onNavigate }) {
   const content = pathname.startsWith('/content')
   const selectedSection = new URLSearchParams(search).get('section')
   const studentsPath = student.is_admin ? '/admin/students' : '/teacher/students'
-  return <aside className={`app-sidebar staff-sidebar${open ? ' open' : ''}`}>
+  return <aside id="app-sidebar" ref={sidebarRef} inert={phone && !open} role={open ? 'dialog' : undefined} aria-modal={open || undefined} aria-label="القائمة الرئيسية" tabIndex={-1} className={`app-sidebar staff-sidebar${open ? ' open' : ''}`}>
+    <button className="sidebar-close" onClick={onNavigate} aria-label="إغلاق القائمة">×</button>
     <div className="staff-sidebar-brand">
       <div>مَنْصَّةُ تَعَلُّمِ الْعَرَبِيَّة</div>
       <span>Karabük Üniversitesi · İlahiyat</span>

@@ -10,6 +10,7 @@ from app.models import Exercise, ExerciseAnswer
 from app.schemas import AnswerResult, AnswerSubmit, ExerciseOut
 from app.security import get_current_student
 from app.services.answers import is_correct_answer
+from app.services.practice import submit as submit_practice
 
 router = APIRouter(prefix="/api", tags=["exercises"])
 
@@ -43,6 +44,13 @@ async def submit_answer(
     exercise = result.scalar_one_or_none()
     if not exercise:
         raise HTTPException(status_code=404, detail="التمرين غير موجود")
+
+    if data.practice_session_id is not None:
+        if not data.practice_filter:
+            raise HTTPException(422, "نوع التدريب مطلوب")
+        return await submit_practice(db, student_id, data, exercise)
+    if data.practice_filter is not None:
+        raise HTTPException(422, "معرّف الجلسة مطلوب")
 
     is_correct = is_correct_answer(data.student_answer, exercise.correct_answer)
     points_earned = exercise.points if is_correct else 0

@@ -188,6 +188,8 @@ class ExerciseOut(BaseModel):
 class AnswerSubmit(BaseModel):
     exercise_id:    int
     student_answer: str
+    practice_session_id: Optional[str] = Field(default=None, min_length=36, max_length=36)
+    practice_filter: Optional[str] = Field(default=None, max_length=30)
 
 class AnswerResult(BaseModel):
     is_correct:     bool

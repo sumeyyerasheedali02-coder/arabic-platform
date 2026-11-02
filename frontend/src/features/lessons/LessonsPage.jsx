@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../../api/client'
 import { useApiData } from '../../api/useApiData'
 import { useAuth } from '../../auth/useAuth'
 import ErrorState from '../../components/ErrorState'
 import { CenteredSpinner } from '../../components/Spinner'
 import { useUnits } from '../units/useUnits'
+import { useProgress } from '../progress/useProgress'
 import LessonCard from './LessonCard'
 import LessonPanel from './LessonPanel'
 import UnitHeader from './UnitHeader'
@@ -20,7 +22,9 @@ const loadUnitContent = (unitId) => Promise.all([
 ]).then(([lessons, vocab]) => ({ lessons: lessons.data, vocab: vocab.data }))
 
 export default function LessonsPage({ preview = false }) {
-  const { token } = useAuth()
+  const navigate = useNavigate()
+  const { token, student } = useAuth()
+  const { progress, loading: progressLoading, error: progressError } = useProgress()
   const { units, selectedUnit, selectUnit, loading: loadingUnits, error: unitsError, reload: reloadUnits } = useUnits()
   const unitId = selectedUnit?.id
   const content = useApiData(unitId == null ? null : `unit-content:${unitId}`, () => loadUnitContent(unitId))
@@ -31,6 +35,12 @@ export default function LessonsPage({ preview = false }) {
 
   const lessons = content.data?.lessons ?? []
   const vocab   = content.data?.vocab ?? []
+  const unitProgress = progress.filter(row => row.unit_id === unitId)
+  const hasProgress = !!token && student && !student.is_teacher && !student.is_admin && !preview && !progressLoading && !progressError
+  const completed = new Set(unitProgress.filter(row => row.status === 'completed').map(row => row.lesson_id))
+  const progressPercent = hasProgress && content.data && lessons.length
+    ? lessons.filter(lesson => completed.has(lesson.id)).length / lessons.length * 100 : null
+  const studySeconds = hasProgress ? unitProgress.reduce((sum, row) => sum + Math.max(0, Number(row.time_spent_sec) || 0), 0) : null
   // Only a lesson of the unit on screen can be open
   const openLesson = lessons.find(lesson => lesson.id === openLessonId) ?? null
 
@@ -59,14 +69,19 @@ export default function LessonsPage({ preview = false }) {
             <>
               <UnitHeader
                 unit={selectedUnit} canSave={!!token && !preview} preview={preview}
+                lessonCount={content.data ? lessons.length : selectedUnit.total_lessons}
+                vocabularyCount={content.data ? vocab.length : null}
+                progressPercent={progressPercent} studySeconds={studySeconds}
+                onShowVocabulary={() => setTab('vocab')}
                 message={srsMsg.unitId === unitId ? srsMsg.text : ''}
                 onAddToReview={addToSRS}
               />
 
-              <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
+              <div className="lesson-content-tabs" role="group" aria-label="محتوى الوحدة" style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
                 {PAGE_TABS.map(([key, label]) => (
                   <button
                     key={key}
+                    aria-pressed={tab === key}
                     onClick={() => setTab(key)}
                     className={tab === key ? 'tab-active' : 'tab-inactive'}
                     style={{
@@ -89,7 +104,15 @@ export default function LessonsPage({ preview = false }) {
                 <ErrorState compact onRetry={content.reload} />
               ) : tab === 'lessons' ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
-                  {lessons.map(lesson => <LessonCard key={lesson.id} lesson={lesson} onOpen={l => setOpenLessonId(l.id)} />)}
+                  {lessons.map(lesson => (
+                    <LessonCard
+                      key={lesson.id} lesson={lesson}
+                      exercise={lesson.lesson_type === 'mufradat'} unitNumber={selectedUnit.unit_number}
+                      progressAvailable={hasProgress}
+                      progress={unitProgress.find(row => row.lesson_id === lesson.id)}
+                      onOpen={lesson.lesson_type === 'mufradat' ? () => navigate('/exercises') : l => setOpenLessonId(l.id)}
+                    />
+                  ))}
                 </div>
               ) : (
                 <VocabularyList words={vocab} variant="page" />

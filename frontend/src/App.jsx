@@ -47,7 +47,8 @@ function PersonalProgressOnly({ children }) {
 }
 
 function ChatAccess({ children }) {
-  const { student } = useAuth()
+  const { student, token } = useAuth()
+  if (!token || !student) return <Navigate to="/login" replace />
   if (student?.is_admin) return <Navigate to="/admin" replace />
   return student?.is_teacher ? <Navigate to="/teacher" replace /> : children
 }

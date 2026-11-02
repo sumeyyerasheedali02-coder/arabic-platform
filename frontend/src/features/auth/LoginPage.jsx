@@ -72,7 +72,8 @@ export default function LoginPage() {
         setEmailState('new')
       }
     } catch {
-      setEmailState('new')
+      setEmailState('idle')
+      setError(lang === 'ar' ? 'تعذّر الاتصال. تحقق من الإنترنت وحاول مجددًا.' : 'Bağlantı kurulamadı. İnternetini kontrol edip tekrar dene.')
     }
   }
 
@@ -138,12 +139,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', direction: lang === 'ar' ? 'rtl' : 'ltr', fontFamily: "var(--aq-font-arabic)" }}>
+    <div className="auth-page" style={{ minHeight: '100dvh', display: 'flex', direction: lang === 'ar' ? 'rtl' : 'ltr', fontFamily: "var(--aq-font-arabic)" }}>
 
       <HeroPanel />
 
       {/* ═══ FORM PANEL ═══ */}
-      <div style={{
+      <div className="auth-form-panel" style={{
         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: '40px 24px', background: 'var(--aq-ivory)',
       }}>
@@ -174,7 +175,7 @@ export default function LoginPage() {
           </div>
 
           {/* Card */}
-          <div style={{
+          <div className="auth-card" style={{
             background: 'var(--aq-card)', borderRadius: 24, padding: '40px 36px',
             boxShadow: '0 4px 24px rgba(0,0,0,0.06)', border: '1px solid var(--aq-border)',
           }}>
@@ -187,7 +188,7 @@ export default function LoginPage() {
                 <label htmlFor="login-identifier" style={labelStyle}>{emailState === 'new' ? t.email : t.loginIdentifier}</label>
                 <div style={{ position: 'relative' }}>
                   <span style={{ ...fieldIcon, color: 'var(--aq-text-muted)', fontSize: 16, pointerEvents: 'none' }}>✉</span>
-                  <input id="login-identifier" type="text" value={email} autoComplete="username"
+                  <input id="login-identifier" type="text" value={email} autoComplete="username" autoCapitalize="none" spellCheck={false} enterKeyHint="next"
                     onChange={e => { setEmail(e.target.value); if (emailState !== 'idle') resetEmail() }}
                     onBlur={handleEmailBlur} required placeholder={t.identifierPlaceholder} dir="ltr"
                     style={{

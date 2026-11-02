@@ -4,15 +4,25 @@ import { staffHome, staffPageTitle } from './staffNavigation'
 import TrackingLink from '../components/TrackingLink'
 
 const NAV = [
-  { to: '/lessons',   label: 'الدروس' },
-  { to: '/exercises', label: 'التدريبات' },
-  { to: '/shared-words', label: 'مفردات مشتركة' },
-  { to: '/srs',       label: 'بطاقات الحفظ' },
-  { to: '/chat',      label: 'محادثة AI' },
-  { to: '/dashboard', label: 'تقدمي' },
+  { to: '/lessons',   label: 'الدروس', icon: 'book' },
+  { to: '/exercises', label: 'التدريبات', icon: 'practice' },
+  { to: '/shared-words', label: 'مفردات مشتركة', shortLabel: 'مفردات', icon: 'words' },
+  { to: '/srs',       label: 'بطاقات الحفظ', shortLabel: 'البطاقات', icon: 'cards' },
+  { to: '/dashboard', label: 'تقدمي', icon: 'progress' },
 ]
 
-export default function Header({ onMenuClick }) {
+function NavigationIcon({ name }) {
+  const paths = {
+    book: <><path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1m0-15c3-2 6-2 9-1v15c-3-1-6-1-9 1V5" /></>,
+    words: <><path d="M3 5h12M8 3v2M5 5c1 5 4 8 8 10M13 5c-1 5-5 8-10 11M14 21l4-10 4 10M15 18h6" /></>,
+    cards: <><rect x="6" y="6" width="15" height="15" rx="3" /><path d="M3 16V6a3 3 0 0 1 3-3h10m-5 9h5m-5 4h3" /></>,
+    practice: <><rect x="4" y="3" width="16" height="18" rx="3" /><path d="m8 9 2 2 5-5M8 16h8" /></>,
+    progress: <><path d="M4 3v18h17M8 15l4-5 4 2 5-7" /></>,
+  }
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
+}
+
+export default function Header({ onMenuClick, menuOpen }) {
   const { student, logout } = useAuth()
   const location  = useLocation()
   const navigate  = useNavigate()
@@ -21,19 +31,13 @@ export default function Header({ onMenuClick }) {
   const handleLogout = () => { logout(); navigate('/login') }
 
   return (
-    <header className="app-header" style={{
-      background: '#fff',
-      borderBottom: '1px solid var(--border)',
-      padding: '0 20px',
-      display: 'flex', alignItems: 'center', gap: 14,
-      position: 'sticky', top: 0, zIndex: 50,
-    }}>
+    <header className="app-header">
       {/* Menu button — mobile only (opens the sidebar drawer) */}
-      <button className="hdr-menu-btn" onClick={onMenuClick} aria-label="القائمة">☰</button>
+      <button className="hdr-menu-btn" onClick={onMenuClick} aria-label="فتح القائمة" aria-expanded={menuOpen} aria-controls="app-sidebar">☰</button>
 
       {/* Platform logo */}
-      <div className="hdr-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 170, flexShrink: 0 }}>
-        <div style={{ fontFamily: "'Amiri', serif", fontSize: 15, color: 'var(--navy)', lineHeight: 1.2 }}>
+      <div className="hdr-logo" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 140, flexShrink: 0 }}>
+        <div style={{ fontFamily: "'Amiri', serif", fontSize: 17, color: 'var(--navy)', lineHeight: 1.2 }}>
           مَنْصَّةُ تَعَلُّمِ الْعَرَبِيَّة
         </div>
         <div className="hdr-logo-sub" style={{ fontSize: 8.5, color: 'var(--muted)', letterSpacing: '.1em', marginTop: 2 }}>
@@ -42,36 +46,26 @@ export default function Header({ onMenuClick }) {
       </div>
 
       {/* Divider */}
-      <div className="hdr-divider" style={{ width: 1, height: 28, background: 'var(--border)', flexShrink: 0 }} />
+      <div className="hdr-divider" style={{ width: 1, height: 34, background: 'var(--border)', flexShrink: 0 }} />
 
       {/* Nav links */}
       {isStaff ? <div className="staff-header-context">
         <strong>{staffPageTitle(location.pathname, student.is_admin)}</strong>
         {location.pathname !== staffHome(student) && <Link to={staffHome(student)}>الرئيسية</Link>}
-      </div> : <nav className="hdr-nav" style={{ display: 'flex', gap: 2, flex: 1 }}>
-        {NAV.map(({ to, label }) => {
-          const active = location.pathname === to || (to === '/lessons' && location.pathname.startsWith('/lessons'))
-          return (
-            <Link
-              key={to}
-              to={to}
-              style={{
-                padding: '6px 11px', borderRadius: 7, fontSize: 11.5, fontWeight: 500,
-                textDecoration: 'none', transition: 'all .15s',
-                background: active ? 'var(--navy)' : 'transparent',
-                color: active ? '#fff' : 'var(--muted)',
-              }}
-            >
-              {label}
-            </Link>
-          )
+      </div> : <nav className="hdr-nav" aria-label="التنقل الرئيسي">
+        {NAV.map(({ to, label, shortLabel, icon }) => {
+          const active = location.pathname === to || (to === '/lessons' && location.pathname.startsWith('/lessons/'))
+          return <Link key={to} to={to} aria-label={label} className={`hdr-nav-link${active ? ' is-active' : ''}`} aria-current={active ? 'page' : undefined}>
+            <NavigationIcon name={icon} /><span className={shortLabel ? 'hdr-label-full' : undefined}>{label}</span>
+            {shortLabel && <span className="hdr-label-short" aria-hidden="true">{shortLabel}</span>}
+          </Link>
         })}
       </nav>}
 
-      <TrackingLink />
+      {student && <TrackingLink />}
 
       {/* User info + logout */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+      <div className="hdr-account" style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         {student ? (
           <>
             <div className="hdr-user-text" style={{ textAlign: 'right' }}>

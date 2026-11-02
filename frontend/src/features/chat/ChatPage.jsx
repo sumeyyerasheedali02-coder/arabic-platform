@@ -46,8 +46,8 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{display:"flex",flexDirection:"column",height:"calc(100vh - 64px)",background:"#F5F0E8",fontFamily:"'Segoe UI','Noto Sans Arabic',sans-serif",direction:"rtl"}}>
-      <div style={{background:"#1a2744",padding:"0.875rem 1.25rem",display:"flex",alignItems:"center",gap:"0.75rem",borderBottom:"2px solid #C9A84C"}}>
+    <div className="chat-page" style={{display:"flex",flexDirection:"column",height:"100%",minHeight:0,background:"#F5F0E8",fontFamily:"'Segoe UI','Noto Sans Arabic',sans-serif",direction:"rtl"}}>
+      <div className="chat-heading" style={{flexShrink:0,background:"#1a2744",padding:"0.875rem 1.25rem",display:"flex",alignItems:"center",gap:"0.75rem",borderBottom:"2px solid #C9A84C"}}>
         <div style={{width:"40px",height:"40px",borderRadius:"50%",background:"#C9A84C",color:"#1a2744",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"18px",fontWeight:"700"}}>م</div>
         <div>
           <div style={{fontSize:"16px",fontWeight:"700",color:"#F5F0E8"}}>مرشد</div>
@@ -55,13 +55,13 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div ref={listRef} style={{flex:1,overflowY:"auto",padding:"1.25rem",display:"flex",flexDirection:"column",gap:"0.875rem"}}>
+      <div className="chat-messages" ref={listRef} role="log" aria-label="المحادثة" style={{flex:1,minHeight:0,overflowY:"auto",padding:"1.25rem",display:"flex",flexDirection:"column",gap:"0.875rem"}}>
         {messages.map((msg, i) => (
           <div key={i} style={{display:"flex",gap:"0.625rem",alignItems:"flex-end",flexDirection:msg.role==="user"?"row-reverse":"row"}}>
             {msg.role==="model" && (
               <div style={{width:"32px",height:"32px",borderRadius:"50%",background:"#1a2744",color:"#C9A84C",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"14px",fontWeight:"700",flexShrink:0}}>م</div>
             )}
-            <div style={{maxWidth:"75%",padding:"0.75rem 1rem",borderRadius:"16px",fontSize:"15px",lineHeight:"1.7",background:msg.role==="user"?"#1a2744":"#fff",color:msg.role==="user"?"#F5F0E8":"#222",border:msg.role==="model"?"1px solid #e8e0d0":"none"}}>
+            <div className="chat-bubble" style={{minWidth:0,maxWidth:"75%",padding:"0.75rem 1rem",borderRadius:"16px",fontSize:"15px",lineHeight:"1.7",background:msg.role==="user"?"#1a2744":"#fff",color:msg.role==="user"?"#F5F0E8":"#222",border:msg.role==="model"?"1px solid #e8e0d0":"none"}}>
               {msg.content.split('\n').map((paragraph, line) => (
                 <p key={line} dir={textDirection(paragraph)} style={{
                   textAlign: 'start', unicodeBidi: 'isolate', whiteSpace: 'pre-wrap',
@@ -80,12 +80,12 @@ export default function ChatPage() {
         <div />
       </div>
 
-      <div style={{padding:"0.875rem 1.25rem",background:"#fff",borderTop:"1px solid #e8e0d0",display:"flex",alignItems:"center",gap:"0.625rem"}}>
-        <button onClick={send} disabled={loading||!input.trim()} style={{width:"42px",height:"42px",borderRadius:"50%",background:"#1a2744",border:"1.5px solid #C9A84C",color:"#F5F0E8",fontSize:"18px",cursor:"pointer",flexShrink:0}}>↑</button>
-        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()}
+      <form className="chat-composer" onSubmit={event => { event.preventDefault(); send() }} style={{flexShrink:0,padding:"0.875rem 1.25rem",background:"#fff",borderTop:"1px solid #e8e0d0",display:"flex",alignItems:"center",gap:"0.625rem"}}>
+        <button type="submit" aria-label="إرسال الرسالة" disabled={loading||!input.trim()} style={{width:"48px",height:"48px",borderRadius:"50%",background:"#1a2744",border:"1.5px solid #C9A84C",color:"#F5F0E8",fontSize:"18px",cursor:"pointer",flexShrink:0}}>↑</button>
+        <input aria-label="رسالتك بالعربية أو التركية" enterKeyHint="send" value={input} onChange={e=>setInput(e.target.value)}
           placeholder="اكتب سؤالك · Sorunu yaz..." dir="auto" disabled={loading}
-          style={{flex:1,border:"1.5px solid #d0c5b0",borderRadius:"12px",padding:"0.75rem 1rem",fontSize:"15px",color:"#1a2744",outline:"none",background:"#F5F0E8",fontFamily:"inherit"}} />
-      </div>
+          style={{flex:1,minWidth:0,border:"1.5px solid #d0c5b0",borderRadius:"12px",padding:"0.75rem 1rem",fontSize:"16px",color:"#1a2744",background:"#F5F0E8",fontFamily:"inherit"}} />
+      </form>
     </div>
   );
 }

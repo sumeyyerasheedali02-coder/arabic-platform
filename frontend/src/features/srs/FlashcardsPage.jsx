@@ -27,6 +27,7 @@ export default function FlashcardsPage() {
   const due = useApiData(token ? 'srs-due' : null, () => api.get('/me/srs/due').then(r => r.data))
   const [session, setSession]       = useState(() => newSession(null))
   const [submitting, setSubmitting] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   // Each batch of due cards is one review session
   const cards = due.data ?? NO_CARDS
@@ -37,6 +38,7 @@ export default function FlashcardsPage() {
   const handleReview = async (quality) => {
     if (submitting) return
     setSubmitting(true)
+    setSaveError('')
     const card = cards[current]
     try {
       await api.post('/me/srs/review', { vocabulary_id: card.vocabulary_id, quality })
@@ -50,7 +52,7 @@ export default function FlashcardsPage() {
           ? { ...s, stats, done: true }
           : { ...s, stats, current: s.current + 1, flipped: false }
       })
-    } catch (e) { console.error(e) }
+    } catch { setSaveError('لم تُحفظ المراجعة. تحقق من الاتصال ثم حاول مجددًا.') }
     finally { setSubmitting(false) }
   }
 
@@ -140,7 +142,7 @@ export default function FlashcardsPage() {
   const progress = Math.round((current / cards.length) * 100)
 
   return (
-    <div style={{ maxWidth: 480, margin: '32px auto', padding: '0 16px' }}>
+    <div className="flashcards-page" style={{ maxWidth: 480, margin: '32px auto', padding: '0 16px' }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -162,14 +164,16 @@ export default function FlashcardsPage() {
 
       {/* Flashcard */}
       <div
-        className="card-flip"
+        className="card-flip" role="button" tabIndex={submitting ? -1 : 0}
+        aria-label={flipped ? "عرض الكلمة العربية" : "عرض الترجمة"}
+        onKeyDown={event => { if (!submitting && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setFlipped(f => !f) } }}
         style={{ cursor: 'pointer', marginBottom: 24 }}
         onClick={() => !submitting && setFlipped(f => !f)}
       >
         <div className={`card-inner${flipped ? ' flipped' : ''}`} style={{ height: 240 }}>
 
           {/* Front — Arabic word */}
-          <div className="card-face" style={{
+          <div className="card-face" aria-hidden={flipped} style={{
             position: 'absolute', inset: 0,
             background: 'var(--navy)',
             borderRadius: 16,
@@ -194,7 +198,7 @@ export default function FlashcardsPage() {
           </div>
 
           {/* Back — Turkish + example */}
-          <div className="card-face card-back" style={{
+          <div className="card-face card-back" aria-hidden={!flipped} style={{
             position: 'absolute', inset: 0,
             background: '#fff', border: '1px solid var(--border)',
             borderRadius: 16,
@@ -223,6 +227,7 @@ export default function FlashcardsPage() {
         </div>
       </div>
 
+      {saveError && <p role="alert" className="flashcard-error">{saveError}</p>}
       {/* Action buttons */}
       {!flipped ? (
         <div style={{ textAlign: 'center' }}>
@@ -244,7 +249,7 @@ export default function FlashcardsPage() {
           <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--muted)', marginBottom: 10 }}>
             كيف كانت إجابتك؟
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
+          <div className="flashcard-ratings" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
             {RATINGS.map(({ q, label, bg, color, border }) => (
               <button
                 key={q}

@@ -16,7 +16,6 @@ export const TYPE_LABELS = {
 }
 
 export const FILTER_OPTIONS = [
-  { value: 'all',             label: 'الكل' },
   { value: 'multiple_choice', label: 'اختيار متعدد' },
   { value: 'fill_blank',      label: 'إكمال فراغ' },
   { value: 'true_false',      label: 'صح وخطأ' },
@@ -27,6 +26,8 @@ export const FILTER_OPTIONS = [
   { value: 'plural',          label: 'الجمع' },
   { value: 'comprehension',   label: 'استيعاب قرائي' },
   { value: 'word_order',      label: 'ترتيب كلمات' },
+  { value: 'form_sentence',   label: 'تكوين جملة' },
+  { value: 'respond',         label: 'إجابة بالعربية' },
 ]
 
 // Filters that follow Exercise.category, which the server derives from the

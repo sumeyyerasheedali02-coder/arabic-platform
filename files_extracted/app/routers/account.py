@@ -129,8 +129,9 @@ async def reset_password(data: PasswordReset, request: Request, db: AsyncSession
     limit_requests(request)
     settings = get_settings()
     try:
-        claims = jwt.decode(data.token, settings.secret_key, algorithms=[settings.algorithm])
-        if claims.get("purpose") != "password-reset" or not isinstance(claims.get("ver"), int):
+        claims = jwt.decode(data.token, settings.secret_key, algorithms=[settings.algorithm],
+                            options={"require_exp": True})
+        if claims.get("purpose") != "password-reset" or type(claims.get("ver")) is not int:
             raise ValueError
         account_id = int(claims["sub"])
     except (JWTError, ValueError, KeyError, TypeError):

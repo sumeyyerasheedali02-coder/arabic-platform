@@ -10,11 +10,11 @@ const isNarration = (line) => !line.speaker
 function Narration({ line }) {
   return (
     <div>
-      <div style={{ fontFamily: AMIRI, fontSize: 16, color: 'var(--text)', lineHeight: 1.9 }}>
+      <div style={{ fontFamily: AMIRI, fontSize: 19, color: 'var(--text)', lineHeight: 1.9 }}>
         {line.text_ar}
       </div>
       {line.translation_tr && (
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }} dir="ltr">
+        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }} dir="ltr">
           {line.translation_tr}
         </div>
       )}
@@ -37,7 +37,7 @@ export function DialogueScript({ dialogues, unitNumber }) {
         </div>
       )}
       {dialogue.situation_tr && (
-        <div style={{ fontSize: 11, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }} dir="ltr">
+        <div style={{ fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }} dir="ltr">
           {dialogue.situation_tr}
         </div>
       )}
@@ -56,7 +56,7 @@ export function DialogueScript({ dialogues, unitNumber }) {
             </span>
             <div style={{ flex: 1 }}>
               <div style={{
-                fontFamily: AMIRI, fontSize: 16,
+                fontFamily: AMIRI, fontSize: 19,
                 color: line.is_key_phrase ? 'var(--navy)' : 'var(--text)',
                 fontWeight: line.is_key_phrase ? 700 : 400,
                 lineHeight: 1.6,
@@ -64,7 +64,7 @@ export function DialogueScript({ dialogues, unitNumber }) {
                 {line.text_ar}
               </div>
               {line.translation_tr && (
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }} dir="ltr">
+                <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }} dir="ltr">
                   {line.translation_tr}
                 </div>
               )}
@@ -90,7 +90,7 @@ export function DialogueBubbles({ dialogues, unitNumber }) {
       )}
       {dialogue.situation_tr && (
         <div style={{
-          fontSize: 11, color: 'var(--muted)', fontStyle: 'italic',
+          fontSize: 13, color: 'var(--muted)', fontStyle: 'italic',
           marginBottom: 14, padding: '6px 12px',
           background: 'var(--cream)', border: '1px solid var(--border)',
           borderRadius: 8,
@@ -124,10 +124,10 @@ export function DialogueBubbles({ dialogues, unitNumber }) {
                 background: isRight ? 'var(--cream)' : 'var(--navy)',
                 border: `1px solid ${isRight ? 'var(--border)' : 'var(--navy)'}`,
                 borderRadius: isRight ? '4px 12px 12px 12px' : '12px 4px 12px 12px',
-                padding: '10px 14px', maxWidth: '75%',
+                padding: '10px 14px', maxWidth: 'calc(100% - 44px)', minWidth: 0, overflowWrap: 'anywhere',
               }}>
                 <div style={{
-                  fontFamily: AMIRI, fontSize: 15,
+                  fontFamily: AMIRI, fontSize: 19,
                   color: isRight ? 'var(--navy)' : '#fff',
                   lineHeight: 1.6, direction: 'rtl',
                   fontWeight: line.is_key_phrase ? 700 : 400,
@@ -135,7 +135,7 @@ export function DialogueBubbles({ dialogues, unitNumber }) {
                   {line.text_ar}
                 </div>
                 {line.translation_tr && (
-                  <div style={{ fontSize: 11, color: isRight ? 'var(--muted)' : 'rgba(255,255,255,.55)', marginTop: 3 }} dir="ltr">
+                  <div style={{ fontSize: 13, color: isRight ? 'var(--muted)' : 'rgba(255,255,255,.78)', marginTop: 3 }} dir="ltr">
                     {line.translation_tr}
                   </div>
                 )}
