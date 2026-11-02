@@ -4,130 +4,35 @@ import { useApiData } from '../../api/useApiData'
 import ErrorState from '../../components/ErrorState'
 import { CenteredSpinner } from '../../components/Spinner'
 import { filterWords, totalCount } from './sharedWords'
+import './sharedWords.css'
 
-const NO_CATEGORIES = []
-
-// شائعة = still common in Turkish today; تراثية = archaic/literary.
-const USAGE_STYLE = {
-  شائعة: { background: 'rgba(46,125,50,.1)', color: '#2E7D32' },
-  تراثية: { background: 'rgba(146,110,30,.12)', color: '#926E1E' },
-}
-
-/**
- * «مفردات مشتركة» — Arabic words that a Turkish speaker already half-knows,
- * grouped by topic. Each row shows the Arabic form, the Turkish cognate, how
- * common it is, and a note when the meaning differs (false friends). Public.
- */
+const EMPTY = []
+const PAGE_SIZE = 24
 export default function SharedWordsPage() {
   const query = useApiData('shared-words', () => api.get('/shared-words').then(r => r.data))
-  const [category, setCategory] = useState('all')
+  const [selectedCategory, setCategory] = useState(null)
   const [search, setSearch] = useState('')
-
-  const categories = query.data?.categories ?? NO_CATEGORIES
-  const total = query.data?.total ?? 0
-  const words = useMemo(
-    () => filterWords(categories, category, search),
-    [categories, category, search],
-  )
-
+  const [limit, setLimit] = useState(PAGE_SIZE)
+  const [expanded, setExpanded] = useState(false)
+  const categories = query.data?.categories ?? EMPTY
+  const category = categories.some(c => c.key === selectedCategory) ? selectedCategory : categories[0]?.key ?? ''
+  const words = useMemo(() => filterWords(categories, category, search), [categories, category, search])
+  function choose(value) { setCategory(value); setLimit(PAGE_SIZE) }
   if (query.loading) return <CenteredSpinner size={32} height={260} />
   if (query.error) return <ErrorState onRetry={query.reload} />
-
-  return (
-    <div className="shared-words-page" style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 48px' }}>
-      {/* Heading */}
-      <div style={{ marginBottom: 6 }}>
-        <h1 style={{ fontFamily: "'Amiri', serif", fontSize: 26, color: 'var(--navy)', margin: 0 }}>
-          المفردات المشتركة
-        </h1>
-        <p style={{ fontSize: 13, color: 'var(--muted)', margin: '6px 0 0', lineHeight: 1.7 }}>
-          كلماتٌ عربيةٌ تشاركها التركية في اللفظ أو الجذر — تعرفها أنت أصلًا.
-          انتبه لملاحظات فروق المعنى؛ فبعضها «أصدقاء كاذبون» يختلف معناها في التركية.
-        </p>
-        <p className="shared-count" style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0 0' }} dir="ltr">
-          {totalCount(categories)} / {total}
-        </p>
-      </div>
-
-      {/* Search */}
-      <input
-        type="search"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="ابحث بالعربية أو التركية…"
-        aria-label="بحث في المفردات المشتركة"
-        style={{
-          width: '100%', boxSizing: 'border-box', margin: '16px 0 12px',
-          padding: '10px 14px', borderRadius: 9, border: '1px solid var(--border)',
-          fontSize: 14, fontFamily: "'Amiri', serif", background: '#fff', color: 'var(--text)',
-        }}
-      />
-
-      {/* Category chips */}
-      <div className="shared-word-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-        <Chip active={category === 'all'} onClick={() => setCategory('all')}>الكل</Chip>
-        {categories.map((c) => (
-          <Chip key={c.key} active={category === c.key} onClick={() => setCategory(c.key)}>
-            {c.title_ar}
-          </Chip>
-        ))}
-      </div>
-
-      {/* Results */}
-      {words.length === 0 ? (
-        <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, padding: '40px 0' }}>
-          لا توجد نتائج مطابقة.
-        </p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {words.map((w, i) => (
-            <div
-              key={`${w.category}:${w.ar}:${w.tr}:${i}`}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-                background: '#fff', border: '1px solid var(--border)', borderRadius: 11,
-                padding: '12px 16px',
-              }}
-            >
-              <div style={{ fontFamily: "'Amiri', serif", fontSize: 20, color: 'var(--navy)', minWidth: 110 }}>
-                {w.ar}
-              </div>
-              <div dir="ltr" style={{ fontSize: 15, fontWeight: 500, color: 'var(--text)', minWidth: 110, textAlign: 'left' }}>
-                {w.tr}
-              </div>
-              <span style={{
-                fontSize: 10, fontWeight: 600, padding: '2px 9px', borderRadius: 20,
-                ...(USAGE_STYLE[w.usage] || USAGE_STYLE['شائعة']),
-              }}>
-                {w.usage}
-              </span>
-              {w.note && (
-                <div style={{ flex: 1, minWidth: 180, fontSize: 12, color: 'var(--muted)', lineHeight: 1.6 }}>
-                  {w.note}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Chip({ active, onClick, children }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={active}
-      style={{
-        padding: '5px 12px', borderRadius: 20, fontSize: 11.5, fontWeight: 500, cursor: 'pointer',
-        border: '1px solid ' + (active ? 'var(--navy)' : 'var(--border)'),
-        background: active ? 'var(--navy)' : '#fff',
-        color: active ? '#fff' : 'var(--muted)',
-        fontFamily: "'Amiri', serif", transition: 'all .15s',
-      }}
-    >
-      {children}
-    </button>
-  )
+  return <div className="cognates-page" dir="rtl">
+    <header className="cognates-hero"><span className="cognates-eyebrow">العربية × Türkçe</span><h1>كلمات تعرفها بالفعل</h1><p>اكتشف ما يجمع العربية والتركية، وانتبه لاختلاف المعنى.</p><span className="cognates-total" lang="tr" dir="ltr">{totalCount(categories)} ortak kelime</span></header>
+    <section className="cognates-tools" aria-label="البحث والتصنيف">
+      <div className="cognates-search"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></svg><input type="search" value={search} onChange={e => { setSearch(e.target.value); setLimit(PAGE_SIZE) }} dir="auto" placeholder="ابحث بكلمة عربية أو تركية…" aria-label="بحث في المفردات المشتركة" /></div>
+      <label className="cognates-mobile-category" htmlFor="cognates-category">التصنيف<select id="cognates-category" value={category} onChange={e => choose(e.target.value)}>{categories.map(c => <option key={c.key} value={c.key}>{c.title_ar} ({c.words.length})</option>)}</select></label>
+      <div className="cognates-categories" id="cognates-categories" role="group" aria-label="تصنيفات الكلمات">{categories.filter((c,index) => expanded || index < 5 || c.key === category).map(c => <button key={c.key} aria-pressed={category === c.key} onClick={() => choose(c.key)}>{c.title_ar}<span>{c.words.length}</span></button>)}</div>
+      {categories.length > 5 && <button className="cognates-category-toggle" aria-expanded={expanded} aria-controls="cognates-categories" onClick={() => setExpanded(value => !value)}>{expanded ? 'اختصار التصنيفات ↑' : `جميع التصنيفات (${categories.length}) ↓`}</button>}
+    </section>
+    <div className="cognates-results-title"><h2>{categories.find(c => c.key === category)?.title_ar ?? 'المفردات المشتركة'}</h2><span role="status" aria-live="polite">{words.length} نتيجة</span></div>
+    {words.length ? <><div className="cognates-grid">{words.slice(0,limit).map((word, index) => <article className="cognate-card" key={`${word.category}:${word.ar}:${word.tr}:${index}`}>
+      <div className="cognate-meta"><span>{word.category_ar}</span><span className={`cognate-usage${word.usage === 'تراثية' ? ' is-literary' : ''}`}>{word.usage}</span></div>
+      <div className="cognate-pair"><div><span>العربية</span><h3 lang="ar" dir="rtl">{word.ar}</h3></div><span className="cognate-bridge" aria-hidden="true">↔</span><div lang="tr" dir="ltr"><span>Türkçe</span><p>{word.tr}</p></div></div>
+      {word.note && <p className="cognate-note"><strong>انتبه للمعنى</strong>{word.note}</p>}
+    </article>)}</div><div className="cognates-more"><span>عرض {Math.min(limit,words.length)} من {words.length}</span>{limit < words.length && <button onClick={() => setLimit(value => value + PAGE_SIZE)}>عرض المزيد <span aria-hidden="true">↓</span></button>}</div></> : <div className="cognates-empty"><h3>لا توجد كلمات مطابقة</h3><p>جرّب كلمة أخرى أو اختر تصنيفًا آخر.</p><button onClick={() => { setSearch(''); setLimit(PAGE_SIZE) }}>مسح البحث</button></div>}
+  </div>
 }
