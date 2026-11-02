@@ -79,6 +79,7 @@ class Settings:
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
+    brevo_api_key: str = ""
     password_reset_url: str = ""
     client_ip_header: str = ""
 
@@ -100,6 +101,7 @@ class Settings:
             smtp_username=os.getenv("SMTP_USERNAME", "").strip(),
             smtp_password=os.getenv("SMTP_PASSWORD", ""),
             smtp_from=os.getenv("SMTP_FROM", "").strip(),
+            brevo_api_key=os.getenv("BREVO_API_KEY", "").strip(),
             password_reset_url=os.getenv("PASSWORD_RESET_URL", "").strip(),
             client_ip_header=os.getenv("CLIENT_IP_HEADER", "").strip().lower(),
         )

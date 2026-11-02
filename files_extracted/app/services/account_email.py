@@ -1,11 +1,23 @@
-"""Password recovery mail. Credentials and the trusted link origin come from configuration."""
+"""Password recovery mail. Credentials and the trusted link origin come from configuration.
+
+Two ways to deliver, chosen by configuration:
+  - BREVO_API_KEY: an HTTPS call to the Brevo API (port 443), for hosts that block
+    outbound SMTP (Railway's Hobby plan does);
+  - SMTP_HOST: classic SMTP with TLS.
+"""
+import json
 import smtplib
 import ssl
+import urllib.error
+import urllib.request
 from email.message import EmailMessage
+from email.utils import parseaddr
 from html import escape
 from urllib.parse import urlencode, urlsplit
 
 from app.config import get_settings
+
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 def mail_ready() -> bool:
@@ -18,9 +30,9 @@ def mail_ready() -> bool:
                      and not any(char.isspace() for char in settings.password_reset_url))
     except ValueError:
         return False
-    return bool(settings.smtp_host and settings.smtp_from and valid_url
-                and 1 <= settings.smtp_port <= 65535
-                and bool(settings.smtp_username) == bool(settings.smtp_password)
+    smtp_ok = bool(settings.smtp_host and 1 <= settings.smtp_port <= 65535
+                   and bool(settings.smtp_username) == bool(settings.smtp_password))
+    return bool(settings.smtp_from and valid_url and (settings.brevo_api_key or smtp_ok)
                 and not any(char in settings.smtp_from for char in "\r\n"))
 
 
@@ -69,6 +81,9 @@ def send_reset_email(address: str, token: str) -> None:
         raise ValueError("Password recovery mail is not configured")
     settings = get_settings()
     message = reset_message(address, token)
+    if settings.brevo_api_key:
+        _send_with_brevo(message)
+        return
     context = ssl.create_default_context()
     if settings.smtp_port == 465:
         connection = smtplib.SMTP_SSL(settings.smtp_host, settings.smtp_port,
@@ -83,3 +98,25 @@ def send_reset_email(address: str, token: str) -> None:
         if settings.smtp_username:
             server.login(settings.smtp_username, settings.smtp_password)
         server.send_message(message)
+
+
+def _send_with_brevo(message: EmailMessage) -> None:
+    settings = get_settings()
+    name, sender = parseaddr(settings.smtp_from)
+    request = urllib.request.Request(
+        BREVO_URL, method="POST",
+        data=json.dumps({
+            "sender": {"name": name or "Arabiq Akademi", "email": sender},
+            "to": [{"email": message["To"]}],
+            "subject": message["Subject"],
+            "textContent": message.get_body(preferencelist=("plain",)).get_content(),
+            "htmlContent": message.get_body(preferencelist=("html",)).get_content(),
+        }).encode(),
+        headers={"api-key": settings.brevo_api_key, "accept": "application/json",
+                 "content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=15):
+            pass
+    except urllib.error.HTTPError as problem:
+        # The status code is enough; the response body may repeat the address.
+        raise RuntimeError(f"Brevo answered HTTP {problem.code}") from None

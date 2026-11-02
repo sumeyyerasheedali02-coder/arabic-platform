@@ -113,9 +113,10 @@ async def forgot_password(data: ResetRequest, request: Request, db: AsyncSession
         )
         try:
             await asyncio.to_thread(send_reset_email, account.email, token)
-        except Exception:
-            # Do not log credentials, mail addresses or links, or reveal account existence.
-            logger.error("Password recovery mail delivery failed")
+        except Exception as problem:
+            # Do not log credentials, mail addresses or links, or reveal account existence;
+            # the exception type and the provider's status code are enough to diagnose.
+            logger.error("Password recovery mail delivery failed (%s)", problem.__class__.__name__)
     return {"message": "إذا كان البريد مرتبطًا بحساب نشط، ستصلك رسالة استعادة كلمة المرور."}
 
 
