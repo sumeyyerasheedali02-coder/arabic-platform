@@ -9,7 +9,7 @@ from app.database import get_db
 from app.models import Exercise, ExerciseAnswer
 from app.schemas import AnswerResult, AnswerSubmit, ExerciseOut
 from app.security import get_current_student
-from app.services.answers import is_correct_answer
+from app.services.answers import is_correct_answer, is_typed_exercise
 from app.services.practice import submit as submit_practice
 
 router = APIRouter(prefix="/api", tags=["exercises"])
@@ -52,7 +52,8 @@ async def submit_answer(
     if data.practice_filter is not None:
         raise HTTPException(422, "معرّف الجلسة مطلوب")
 
-    is_correct = is_correct_answer(data.student_answer, exercise.correct_answer)
+    is_correct = is_correct_answer(data.student_answer, exercise.correct_answer,
+                                   typed=is_typed_exercise(exercise.exercise_type, exercise.options))
     points_earned = exercise.points if is_correct else 0
 
     # Every attempt is kept; the teacher report sums points_earned.

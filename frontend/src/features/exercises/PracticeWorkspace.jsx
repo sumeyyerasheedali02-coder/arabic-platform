@@ -8,7 +8,7 @@ import { useLessonActivity } from '../activity/useLessonActivity'
 import ExerciseCard from './ExerciseCard'
 import SessionSummary from './SessionSummary'
 import { FILTER_OPTIONS, matchesFilter } from './filters'
-import { isCorrectAnswer } from './answers'
+import { isCorrectAnswer, isTypedExercise } from './answers'
 import { correctCount, successRate, totalPoints } from './session'
 import { contentKey, newGuestSession, readGuestSessions, saveGuestSession } from './practiceStorage'
 
@@ -97,7 +97,7 @@ export default function PracticeWorkspace({ unit, allExercises, isGuest }) {
 
   async function submit(value) {
     let result
-    if (isGuest) result = { is_correct: isCorrectAnswer(value, exercise.correct_answer), correct_answer: exercise.correct_answer, explanation_ar: null, points_earned: 0 }
+    if (isGuest) result = { is_correct: isCorrectAnswer(value, exercise.correct_answer, isTypedExercise(exercise.exercise_type, exercise.options)), correct_answer: exercise.correct_answer, explanation_ar: null, points_earned: 0 }
     else result = (await api.post('/exercises/submit', { exercise_id: exercise.id, student_answer: value,
       practice_session_id: active.session_id, practice_filter: active.filter_key })).data
     remember({ ...active, results: [...active.results, { ...result, exercise_id: exercise.id, student_answer: value }], updated_at: new Date().toISOString() })

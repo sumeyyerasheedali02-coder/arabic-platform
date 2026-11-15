@@ -212,12 +212,33 @@ def generated(unit: int, vocabulary: list[dict]) -> list[dict]:
     return rows
 
 
+def apply_alternatives(unit: int, rows: list[dict]) -> None:
+    """Add the reviewed extra answers of content/exercises/alternatives.py to their exercises."""
+    from content.exercises.alternatives import ALTERNATIVES
+
+    by_number = {row["exercise_number"]: row for row in rows}
+    for (alt_unit, number), (guard, extra) in ALTERNATIVES.items():
+        if alt_unit != unit:
+            continue
+        row = by_number.get(number)
+        where = f"unit {unit} exercise {number}"
+        if row is None or normalize_answer(guard) not in normalize_answer(row["question_ar"]):
+            raise BankError(f"{where}: alternatives belong to a question containing «{guard}»")
+        if row["exercise_type"] in ("synonym", "antonym", "plural"):
+            extra = _with_article_variants(extra)
+        row["correct_answer"] = f"{row['correct_answer']} / {extra}"
+        quoted = re.search("«(.+?)»", row["question_ar"])
+        if quoted and normalize_answer(quoted.group(1)) in accepted_answers(row["correct_answer"]):
+            raise BankError(f"{where}: an alternative repeats the word asked about")
+
+
 def unit_bank(unit: int, written: dict, vocabulary: list[dict]) -> list[dict]:
     """Every bank exercise of one unit; raises BankError on any rule broken."""
     rows = []
     for kind in WRITTEN_KINDS:
         rows += _written(unit, kind, written.get(kind, ""))
     rows += generated(unit, vocabulary)
+    apply_alternatives(unit, rows)
     numbers = Counter(row["exercise_number"] for row in rows)
     if any(n > 1 for n in numbers.values()):
         raise BankError(f"unit {unit}: repeated exercise number")

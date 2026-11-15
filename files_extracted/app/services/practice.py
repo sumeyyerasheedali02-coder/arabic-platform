@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import select, update
 
 from app.models import Exercise, ExerciseAnswer, PracticeSession, Student, StudentProgress, Unit
-from app.services.answers import is_correct_answer
+from app.services.answers import is_correct_answer, is_typed_exercise
 
 CATEGORY_FILTERS = {"synonym", "antonym", "plural", "comprehension", "word_order"}
 TYPE_FILTERS = {
@@ -111,7 +111,8 @@ async def submit(db, student_id, data, exercise):
     # A retry after a lost response returns the committed result, without a second answer.
     if len(session.results) > session.current_index:
         return session.results[session.current_index]
-    correct = is_correct_answer(data.student_answer, exercise.correct_answer)
+    correct = is_correct_answer(data.student_answer, exercise.correct_answer,
+                                typed=is_typed_exercise(exercise.exercise_type, exercise.options))
     result = {
         "exercise_id": exercise.id, "student_answer": data.student_answer,
         "is_correct": correct, "points_earned": exercise.points if correct else 0,

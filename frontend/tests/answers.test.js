@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { isCorrectAnswer, normalizeAnswer } from '../src/features/exercises/answers.js'
+import { isCorrectAnswer, isTypedExercise, normalizeAnswer } from '../src/features/exercises/answers.js'
 
 // The same cases as files_extracted/tests/test_exercises.py: guests are checked
 // here, logged-in students on the server, and both must agree.
@@ -63,4 +63,59 @@ test('Turkish dotted and dotless i are not told apart', () => {
   assert.ok(isCorrectAnswer('İYİ', 'iyi'))
   assert.ok(isCorrectAnswer('KITAP', 'kitap'))
   assert.ok(isCorrectAnswer('Selamün aleyküm', 'Selâmün aleyküm'))
+})
+
+test('the alef after «ال» and its prefixes counts as a word-initial alef', () => {
+  assert.ok(isCorrectAnswer('الاخت', 'الأَخْت'))
+  assert.ok(isCorrectAnswer('والافطار', 'وَالإِفْطَارُ'))
+  assert.ok(isCorrectAnswer('للام', 'لِلْأُمِّ'))
+})
+
+test('a final ة/ه and ى/ي are typed alike, inside a word they differ', () => {
+  assert.ok(isCorrectAnswer('غرفه', 'غُرْفَةِ'))
+  assert.ok(isCorrectAnswer('مستشفي', 'مُسْتَشْفَى'))
+  assert.ok(isCorrectAnswer('هى', 'هِيَ'))
+  assert.ok(isCorrectAnswer('الساعه الان', 'السَّاعَةَ الآنَ'))
+  assert.equal(isCorrectAnswer('سال', 'سَأَلَ'), false)
+  assert.equal(isCorrectAnswer('بدا', 'بَدَأَ'), false)
+  assert.equal(isCorrectAnswer('مكتبه', 'مَكْتَبٌ'), false)
+})
+
+test('typed answers ignore the article of a single word, picking an option does not', () => {
+  assert.ok(isCorrectAnswer('قلم', 'القَلَمِ', true))
+  assert.ok(isCorrectAnswer('القلم', 'قَلَم', true))
+  assert.ok(isCorrectAnswer('ام', 'الأم', true))
+  assert.equal(isCorrectAnswer('قلم', 'القَلَمِ', false), false)
+  assert.equal(isCorrectAnswer('كتاب جميل', 'الكتاب الجميل', true), false)
+  assert.equal(isCorrectAnswer('الأب', 'الأم', true), false)
+})
+
+test('which exercises are typed', () => {
+  assert.ok(isTypedExercise('fill_blank', null) && isTypedExercise('synonym', []))
+  assert.ok(!isTypedExercise('multiple_choice', ['أ', 'ب']) && !isTypedExercise('true_false', null))
+  assert.ok(!isTypedExercise('match', ['a']) && !isTypedExercise('fill_blank', ['أ', 'ب']))
+})
+
+test('ى for ي and a missing madda are not errors anywhere in a word', () => {
+  assert.ok(isCorrectAnswer('علىكم', 'عَلَيْكُم'))
+  assert.ok(isCorrectAnswer('مدىنه', 'مَدِينَةٌ'))
+  assert.ok(isCorrectAnswer('مراه', 'مِرْآة'))
+})
+
+test('typed answers ignore spaces, apostrophes and the optional tanwin alef', () => {
+  assert.ok(isCorrectAnswer('و عليكم السلام', 'وَعَلَيْكُمُ السَّلَام', true))
+  assert.ok(isCorrectAnswer('الحمدلله', 'الحَمْدُ لله', true))
+  assert.ok(isCorrectAnswer('عبدالمطلب', 'عَبْدُ المُطَّلِب', true))
+  assert.ok(isCorrectAnswer('selamünaleyküm', 'Selâmün aleyküm', true))
+  assert.ok(isCorrectAnswer('büyük anne', 'büyükanne', true))
+  assert.ok(isCorrectAnswer('allah’a şükür', "Allah'a şükür", true))
+  assert.ok(isCorrectAnswer('allaha şükür', "Allah'a şükür", true))
+  assert.ok(isCorrectAnswer('مهندس', 'مُهَنْدِسًا', true))
+  assert.ok(isCorrectAnswer('مهندسا', 'مُهَنْدِسًا', true))
+  assert.ok(isCorrectAnswer('عصا', 'عَصَا', true))
+  assert.equal(isCorrectAnswer('مهندس', 'مُهَنْدِسًا'), false)
+  assert.equal(isCorrectAnswer('و عليكم السلام', 'وَعَلَيْكُمُ السَّلَام'), false)
+  assert.equal(isCorrectAnswer('عليكم السلام', 'وَعَلَيْكُمُ السَّلَام', true), false)
+  assert.equal(isCorrectAnswer('السلام عليكم', 'عليكم السلام', true), false)
+  assert.equal(isCorrectAnswer('عص', 'عَصَا', true), false)
 })
