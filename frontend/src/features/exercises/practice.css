@@ -239,6 +239,15 @@
 }
 
 /* Short phones: reserve the space for answers while keeping all ten types visible. */
+/* The floating AI chat button is fixed at the left edge. Beside the practice panel it
+   becomes an icon and the panel leaves a strip for it, so it never covers the fourth
+   option or the end of the answer field (desktop lab screens). */
+@media (min-width: 601px) and (max-width: 1600px) {
+  .ai-floating-link-practice { width: 52px; height: 52px; min-height: 52px; padding: 0; }
+  .ai-floating-link-practice span { display: none; }
+  .practice-page { padding-left: 84px; }
+}
+
 @media (max-width: 600px) and (max-height: 740px) {
   .practice-page-header > div { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
   .practice-page-header h1 { font-size: 18px; flex-shrink: 0; }
