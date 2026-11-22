@@ -9,6 +9,8 @@ from tools import seed as seed_tool
 
 from ._app import AsyncSessionLocal, main_module, models
 
+pytestmark = pytest.mark.usefixtures("signed_in")
+
 TINY_UNITS = [
     {
         "number": number,
@@ -131,7 +133,7 @@ async def test_replace_rebuilds_content_and_clears_activity_but_keeps_accounts(c
 
     await seed_tool.seed(replace=True, units=TINY_UNITS, unit_exercises={}, log=_quiet)
 
-    assert await _count(models.Student) == 1
+    assert await _count(models.Student) == 2      # the signed-in reader and this student
     assert (await _count(models.SRSCard), await _count(models.ExerciseAnswer)) == (0, 0)
     assert [u["unit_number"] for u in (await client.get("/api/units")).json()] == [1, 9]
     assert (await client.get("/api/me/progress", headers=student.headers)).status_code == 200

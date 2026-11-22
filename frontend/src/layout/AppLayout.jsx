@@ -50,6 +50,8 @@ export default function AppLayout() {
     setMenuOpen(false)
   }
   if (loading) return <CenteredSpinner size={36} minHeight="100dvh" />
+  // The platform is for registered accounts only: no guest browsing.
+  if (!token) return <Navigate to="/login" replace />
   if (token && !isStaff && (!student?.class_section || !student?.student_number)) {
     return <Navigate to="/complete-profile" replace />
   }

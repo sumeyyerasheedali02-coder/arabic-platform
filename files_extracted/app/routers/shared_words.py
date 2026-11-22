@@ -1,14 +1,15 @@
 """Shared Arabic–Turkish vocabulary, served straight from the content module.
 
 Reference data, the same for everyone and tied to no student, so it needs no
-database table: the «مفردات مشتركة» page reads it here. Open to guests.
+database table: the «مفردات مشتركة» page reads it here. Logged-in accounts only.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.security import get_current_account
 from content.shared_words import CATEGORIES
 from content.unit_shared_words import UNIT_SHARED_WORDS
 
-router = APIRouter(prefix="/api", tags=["shared-words"])
+router = APIRouter(prefix="/api", tags=["shared-words"], dependencies=[Depends(get_current_account)])
 
 
 @router.get("/shared-words")

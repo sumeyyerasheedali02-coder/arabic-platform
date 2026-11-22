@@ -7,6 +7,8 @@ from tools import update_dialogues as tool
 
 from ._app import AsyncSessionLocal, models
 
+pytestmark = pytest.mark.usefixtures("signed_in")
+
 
 def _unit(number, *dialogues):
     return {"number": number, "dialogues": [

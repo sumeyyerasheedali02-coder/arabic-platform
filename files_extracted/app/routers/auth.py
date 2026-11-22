@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
 from app.models import Student
 from app.schemas import (
@@ -74,8 +75,20 @@ async def find_login_account(db: AsyncSession, identifier: str) -> Optional[Stud
         Student.student_number == number, Student.role == "student"))).scalar_one_or_none()
 
 
+REGISTRATION_CLOSED = "التسجيل مغلق حاليًا. الدخول للمسجلين في المنصة فقط"
+
+
+@router.get("/registration-status")
+async def registration_status():
+    """Lets the login page know whether new accounts can be created."""
+    return {"open": get_settings().registration_open}
+
+
 @router.post("/register", response_model=Token)
 async def register(data: StudentRegister, db: AsyncSession = Depends(get_db)):
+    # Closed unless REGISTRATION_OPEN is switched on: only existing accounts may enter.
+    if not get_settings().registration_open:
+        raise HTTPException(status_code=403, detail=REGISTRATION_CLOSED)
     email = data.email.strip().lower()
 
     # حساب الأستاذ لا يُنشأ من التسجيل العام: لا يوجد تحقق من ملكية البريد،
@@ -112,6 +125,9 @@ async def register(data: StudentRegister, db: AsyncSession = Depends(get_db)):
 @router.get("/check-email", response_model=EmailCheckResponse)
 async def check_email(email: str, db: AsyncSession = Depends(get_db)):
     # لا نُعيد الاسم حتى لا يُكشف اسم صاحب أي بريد لمن يعرف بريده
+    if not get_settings().registration_open:
+        # Nobody can sign up, so there is no reason to tell strangers which addresses exist.
+        return EmailCheckResponse(exists=True)
     return EmailCheckResponse(exists=await find_student_by_email(db, email) is not None)
 
 

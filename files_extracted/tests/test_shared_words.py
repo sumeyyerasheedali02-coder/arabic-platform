@@ -1,6 +1,10 @@
-"""The shared Arabic–Turkish vocabulary endpoint (public, served from content)."""
+"""The shared Arabic–Turkish vocabulary endpoint (logged-in accounts, served from content)."""
+import pytest
+
 from content.shared_words import CATEGORIES, all_words
 from content.unit_shared_words import UNIT_SHARED_WORDS
+
+pytestmark = pytest.mark.usefixtures("signed_in")
 
 
 async def test_shared_words_are_public_and_grouped(client):

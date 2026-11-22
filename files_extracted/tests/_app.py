@@ -36,6 +36,7 @@ os.environ["SECRET_KEY"] = TEST_SECRET
 os.environ["TEACHER_EMAILS"] = TEACHER_EMAIL
 os.environ["GOOGLE_API_KEY"] = "test-key-not-real"
 os.environ["ALGORITHM"] = "HS256"
+os.environ["REGISTRATION_OPEN"] = "true"   # the suite registers its own students
 
 import main as main_module  # noqa: E402
 from app import models  # noqa: E402

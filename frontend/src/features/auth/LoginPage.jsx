@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import api from '../../api/client'
 import BrandMark from '../../components/BrandMark'
@@ -43,6 +43,8 @@ export default function LoginPage() {
   const [error, setError]         = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [lang, setLang] = useState('ar')
+  // New accounts are only possible while the platform's administrator has opened sign-up.
+  const [registrationOpen, setRegistrationOpen] = useState(false)
   const passwordRef               = useRef(null)
   const { login }                 = useAuth()
   const navigate                  = useNavigate()
@@ -51,6 +53,14 @@ export default function LoginPage() {
 
   const t = LOGIN_TEXTS[lang]
   const busy = submitting || emailState === 'checking'
+
+  useEffect(() => {
+    let current = true
+    api.get('/auth/registration-status')
+      .then(res => { if (current) setRegistrationOpen(res.data.open === true) })
+      .catch(() => {})   // not known: stay closed
+    return () => { current = false }
+  }, [])
 
   const handleEmailBlur = async () => {
     const val = email.trim()
@@ -61,6 +71,12 @@ export default function LoginPage() {
       return
     }
     if (!val || !EMAIL_PATTERN.test(val)) return
+    if (!registrationOpen) {   // nobody can sign up: an address is always a login
+      setEmailState('existing')
+      setError('')
+      setTimeout(() => passwordRef.current?.focus(), 80)
+      return
+    }
     setEmailState('checking')
     setError('')
     try {
@@ -271,7 +287,7 @@ export default function LoginPage() {
 
               {emailState === 'idle' && (
                 <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--aq-text-muted)', marginTop: 12 }}>
-                  {t.hint}
+                  {registrationOpen ? t.hint : t.closedHint}
                 </p>
               )}
             </form>
@@ -279,22 +295,6 @@ export default function LoginPage() {
               {lang === 'tr' ? 'Şifremi unuttum' : 'نسيت كلمة المرور؟'}
             </Link>
 
-            {/* Divider + Guest */}
-            <div style={{ position: 'relative', marginTop: 24, paddingTop: 20 }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1, background: 'var(--aq-border)' }} />
-              <div style={{ position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)', background: 'var(--aq-card)', padding: '0 16px', fontSize: 12, color: 'var(--aq-text-muted)' }}>أو</div>
-              <Link to="/lessons" style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                width: '100%', padding: '14px', borderRadius: 14, textDecoration: 'none',
-                border: '2px solid rgba(201,168,76,0.4)', background: 'transparent',
-                color: 'var(--aq-navy)', fontSize: 15, fontWeight: 600, fontFamily: "var(--aq-font-arabic)",
-                transition: 'all .2s',
-              }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.background = 'rgba(201,168,76,0.05)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)'; e.currentTarget.style.background = 'transparent' }}>
-                {t.guest}
-              </Link>
-            </div>
           </div>
 
           {/* Footer */}

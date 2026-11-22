@@ -5,8 +5,10 @@ from types import SimpleNamespace
 
 import pytest
 
+pytestmark = pytest.mark.usefixtures("signed_in")
 
-async def test_chat_returns_the_provider_reply_for_guests(client, fake_ai):
+
+async def test_chat_returns_the_provider_reply(client, fake_ai):
     res = await client.post("/api/chat", json={
         "messages": [{"role": "user", "content": "السلام عليكم"}]})
     assert res.status_code == 200
@@ -172,52 +174,26 @@ async def test_every_model_busy_is_reported_once_as_unavailable(client, fake_ai)
     assert [c.model for c in fake_ai.calls] == ai_service.candidate_models()
 
 
-async def test_guests_share_a_message_allowance_per_address(client, fake_ai, monkeypatch):
+async def test_each_account_has_its_own_message_allowance(client, fake_ai, register, monkeypatch):
     from app.routers import chat
 
-    monkeypatch.setattr(chat, "known_client_ip", lambda request: "203.0.113.9")
-    monkeypatch.setattr(chat, "CHAT_MESSAGES_PER_GUEST_ADDRESS", 2)
-    message = {"messages": [{"role": "user", "content": "مرحبا"}]}
-    assert (await client.post("/api/chat", json=message)).status_code == 200
-    assert (await client.post("/api/chat/stream", json=message)).status_code == 200
-    refused = await client.post("/api/chat/stream", json=message)
-    assert refused.status_code == 429 and "سجّل الدخول" in refused.json()["detail"]
-    assert len(fake_ai.calls) == 2
-
-
-async def test_logged_in_students_have_their_own_allowance(client, fake_ai, register, monkeypatch):
-    from app.routers import chat
-
-    monkeypatch.setattr(chat, "known_client_ip", lambda request: "203.0.113.9")
-    monkeypatch.setattr(chat, "CHAT_MESSAGES_PER_GUEST_ADDRESS", 1)
     monkeypatch.setattr(chat, "CHAT_MESSAGES_PER_ACCOUNT", 2)
     first, second = await register(), await register()
     message = {"messages": [{"role": "user", "content": "مرحبا"}]}
-    assert (await client.post("/api/chat", json=message)).status_code == 200      # guest
-    assert (await client.post("/api/chat", json=message)).status_code == 429
     for _ in range(2):
         assert (await client.post("/api/chat", json=message, headers=first.headers)).status_code == 200
     assert (await client.post("/api/chat", json=message, headers=first.headers)).status_code == 429
     assert (await client.post("/api/chat", json=message, headers=second.headers)).status_code == 200
 
 
-async def test_without_a_known_address_all_guests_share_one_cap(client, fake_ai, register, monkeypatch):
-    from app.routers import chat
-
-    monkeypatch.setattr(chat, "CHAT_MESSAGES_PER_GUEST_ADDRESS", 1)   # not used: no address
-    monkeypatch.setattr(chat, "CHAT_MESSAGES_ALL_GUESTS", 3)
+async def test_the_tutor_is_closed_to_guests_and_stale_tokens(client, fake_ai):
+    client.headers.pop("Authorization")
     message = {"messages": [{"role": "user", "content": "مرحبا"}]}
-    for _ in range(3):
-        assert (await client.post("/api/chat", json=message)).status_code == 200
-    assert (await client.post("/api/chat", json=message)).status_code == 429
-    student = await register()     # logged-in students are not part of the guest cap
-    assert (await client.post("/api/chat", json=message, headers=student.headers)).status_code == 200
-
-
-async def test_a_stale_token_is_treated_as_a_guest_not_rejected(client, fake_ai):
-    message = {"messages": [{"role": "user", "content": "مرحبا"}]}
-    res = await client.post("/api/chat", json=message, headers={"Authorization": "Bearer not-a-token"})
-    assert res.status_code == 200
+    for path in ("/api/chat", "/api/chat/stream"):
+        assert (await client.post(path, json=message)).status_code == 401
+        stale = await client.post(path, json=message, headers={"Authorization": "Bearer not-a-token"})
+        assert stale.status_code == 401
+    assert fake_ai.calls == []
 
 
 async def test_client_address_header_is_used_only_when_configured(monkeypatch):

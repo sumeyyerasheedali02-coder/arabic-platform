@@ -82,6 +82,7 @@ class Settings:
     brevo_api_key: str = ""
     password_reset_url: str = ""
     client_ip_header: str = ""
+    registration_open: bool = False
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -104,6 +105,7 @@ class Settings:
             brevo_api_key=os.getenv("BREVO_API_KEY", "").strip(),
             password_reset_url=os.getenv("PASSWORD_RESET_URL", "").strip(),
             client_ip_header=os.getenv("CLIENT_IP_HEADER", "").strip().lower(),
+            registration_open=_flag("REGISTRATION_OPEN", False),
         )
 
     def is_teacher_email(self, email: str | None) -> bool:

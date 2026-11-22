@@ -1,4 +1,4 @@
-"""Read-only learning content: units, lessons, vocabulary and dialogues (public)."""
+"""Read-only learning content: units, lessons, vocabulary and dialogues (logged-in accounts only)."""
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,13 +9,14 @@ from sqlalchemy.orm import selectinload
 from app.database import get_db
 from app.models import Dialogue, Lesson, Unit, Vocabulary
 from app.schemas import DialogueOut, LessonOut, UnitOut, VocabularyOut
+from app.security import get_current_account
 from content.dialogue_audio import (
     DIALOGUE_AUDIO,
     PARTIAL_DIALOGUE_AUDIO,
     TEXT_VARIANT_DIALOGUE_AUDIO,
 )
 
-router = APIRouter(prefix="/api", tags=["content"])
+router = APIRouter(prefix="/api", tags=["content"], dependencies=[Depends(get_current_account)])
 
 
 # ── الوحدات ───────────────────────────────────────────────────

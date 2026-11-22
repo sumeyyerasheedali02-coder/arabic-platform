@@ -12,6 +12,8 @@ from tools import add_vocabulary
 
 from ._app import AsyncSessionLocal, Base, engine, models
 
+pytestmark = pytest.mark.usefixtures("signed_in")
+
 ARABIC_ONLY = re.compile(r"^[؀-ۿ\s/؟]+$")
 ARABIC_LETTER = re.compile(r"[ء-ي]")
 
@@ -160,9 +162,9 @@ async def test_units_missing_from_the_database_are_skipped(content):
 
 async def test_students_can_study_the_new_words(client, register, content):
     student = await register()
-    before = await client.get(f"/api/units/{content.unit_a}/vocabulary")
+    before = await client.get(f"/api/units/{content.unit_a}/vocabulary", headers=student.headers)
     result = await _run(apply=True)
-    after = await client.get(f"/api/units/{content.unit_a}/vocabulary")
+    after = await client.get(f"/api/units/{content.unit_a}/vocabulary", headers=student.headers)
     added = len(result.plan.additions[1])
     assert len(after.json()) == len(before.json()) + added
 

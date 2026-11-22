@@ -1,4 +1,4 @@
-"""Exercises: listing (public) and answer submission (logged-in students)."""
+"""Exercises: listing (logged-in accounts) and answer submission (logged-in students)."""
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,14 +8,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Exercise, ExerciseAnswer
 from app.schemas import AnswerResult, AnswerSubmit, ExerciseOut
-from app.security import get_current_student
+from app.security import get_current_account, get_current_student
 from app.services.answers import is_correct_answer, is_typed_exercise
 from app.services.practice import submit as submit_practice
 
 router = APIRouter(prefix="/api", tags=["exercises"])
 
 
-@router.get("/units/{unit_id}/exercises", response_model=List[ExerciseOut])
+@router.get("/units/{unit_id}/exercises", response_model=List[ExerciseOut],
+            dependencies=[Depends(get_current_account)])
 async def get_exercises(
     unit_id:    int,
     difficulty: Optional[int] = None,

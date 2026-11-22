@@ -1,4 +1,7 @@
-"""Guest browsing: every content endpoint is public and read-only."""
+"""Content browsing: read-only, for logged-in accounts only."""
+import pytest
+
+pytestmark = pytest.mark.usefixtures("signed_in")
 
 
 async def test_root_reports_service(client):

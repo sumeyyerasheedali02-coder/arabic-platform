@@ -161,6 +161,14 @@ def register(client, new_email):
     return _register
 
 
+@pytest_asyncio.fixture
+async def signed_in(client, register):
+    """Every request of the test is sent as a registered student (the platform has no guests)."""
+    student = await register()
+    client.headers.update(student.headers)
+    return student
+
+
 @pytest.fixture
 def login(client):
     async def _login(email, password):
